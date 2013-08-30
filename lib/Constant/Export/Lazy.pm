@@ -162,6 +162,7 @@ sub call {
     } else {
         my $override = $constants->{$gimme}->{options}->{override};
         my @overriden_value;
+        my $source;
         if ($override and !$GETTING_VALUE_FOR_OVERRIDE) {
             local $GETTING_VALUE_FOR_OVERRIDE = 1;
             @overriden_value = $override->($ctx, $gimme);
@@ -173,8 +174,10 @@ sub call {
             # can distinguish between "return;" meaning "I don't want
             # to override this" and "return undef;" meaning "I want to
             # override this, to undef".
+            $source = 'override';
             $value = $overriden_value[0];
         } else {
+            $source = 'callback';
             $value = $constants->{$gimme}->{call}->($ctx);
         }
 
@@ -185,6 +188,16 @@ sub call {
         unless ($GETTING_VALUE_FOR_OVERRIDE) {
             no strict 'refs';
             *$glob_name = sub () { $value };
+
+            # Maybe we have a callback that wants to know when we define
+            # our constants, e.g. for printing something out, keeping taps
+            # of what constants we have etc.
+            if (my $after = $constants->{$gimme}->{options}->{after}) {
+                # Future-proof so we can do something clever with the
+                # return value in the future if we want.
+                my @ret = $after->($ctx, $gimme, $value, $source);
+                die "PANIC: Don't return anything from 'after' routines" if @ret;
+            }
         }
     }
 

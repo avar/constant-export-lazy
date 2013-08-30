@@ -2,6 +2,8 @@ package TestSimple;
 use strict;
 use warnings;
 our $CALL_COUNTER;
+our $AFTER_COUNTER;
+our $AFTER_OVERRIDE_COUNTER;
 use Exporter 'import';
 use constant {
     CONST_OLD_1 => 123,
@@ -48,6 +50,19 @@ use Constant::Export::Lazy (
                 39;
             },
         },
+        TEST_AFTER_OVERRIDE => {
+            options => {
+                after => sub {
+                    $AFTER_COUNTER++;
+                    $AFTER_OVERRIDE_COUNTER++;
+                    return;
+                },
+            },
+            call => sub {
+                $CALL_COUNTER++;
+                123456;
+            },
+        },
     },
     options => {
         wrap_existing_import => 1,
@@ -58,6 +73,12 @@ use Constant::Export::Lazy (
                 my $value = $ctx->call($name);
                 return $ENV{$name} * $value;
             }
+            return;
+        },
+        after => sub {
+            my ($ctx, $name, $value, $source) = @_;
+            $AFTER_COUNTER++;
+
             return;
         },
     },
@@ -80,6 +101,7 @@ BEGIN {
         TEST_CONSTANT_VARIABLE
         TEST_CONSTANT_RECURSIVE
         TEST_CONSTANT_OVERRIDDEN_ENV_NAME
+        TEST_AFTER_OVERRIDE
     ))
 }
 
@@ -89,4 +111,7 @@ is(TEST_CONSTANT_CONST, 1, "Simple constant sub");
 is(TEST_CONSTANT_VARIABLE, 6, "Constant composed with some variables");
 is(TEST_CONSTANT_RECURSIVE, 7, "Constant looked up via \$ctx->call(...)");
 is(TEST_CONSTANT_OVERRIDDEN_ENV_NAME, 42, "We properly defined a constant with some overriden options");
-is($TestSimple::CALL_COUNTER, 4, "We didn't redundantly call various subs, we cache them in the stash");
+is($TestSimple::CALL_COUNTER, 5, "We didn't redundantly call various subs, we cache them in the stash");
+is($TestSimple::AFTER_COUNTER, $TestSimple::CALL_COUNTER, "Our AFTER counter is always the same as our CALL counter, we only call this for interned values");
+is(TEST_AFTER_OVERRIDE, 123456, "We have TEST_AFTER_OVERRIDE defined");
+is($TestSimple::AFTER_OVERRIDE_COUNTER, 1, "We correctly call 'after' overrides");
