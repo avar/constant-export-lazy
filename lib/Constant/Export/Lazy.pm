@@ -161,6 +161,8 @@ sub call {
         }
     } else {
         my $override = $constants->{$gimme}->{options}->{override};
+        my $stash    = $constants->{$gimme}->{options}->{stash};
+        local $ctx->{stash} = $stash;
         my @overriden_value;
         my $source;
         if ($override and !$GETTING_VALUE_FOR_OVERRIDE) {
@@ -208,6 +210,13 @@ sub call {
     }
 
     return $value;
+}
+
+sub stash {
+    my ($ctx) = @_;
+
+    # TODO: Die if this doesn't exist?
+    $ctx->{stash};
 }
 
 1;

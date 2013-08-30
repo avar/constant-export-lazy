@@ -57,10 +57,14 @@ use Constant::Export::Lazy (
                     $AFTER_OVERRIDE_COUNTER++;
                     return;
                 },
+                stash => {
+                    some_value => 123456,
+                },
             },
             call => sub {
+                my ($ctx) = @_;
                 $CALL_COUNTER++;
-                123456;
+                $ctx->stash->{some_value};
             },
         },
     },
