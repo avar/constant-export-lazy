@@ -77,18 +77,3 @@ is(TEST_CONSTANT_VARIABLE, 6, "Variadic, should still be constant, TODO check th
 is(TEST_CONSTANT_RECURSIVE, 7, "A constant sub that's recursive");
 is(TEST_CONSTANT_OVERRIDDEN_ENV_NAME, 42, "We properly defined a constant with some overriden options");
 is($TestSimple::CALL_COUNTER, 4, "We didn't redundantly call various subs, we cache them in the stash");
-
-SKIP: {
-    my $env_name = 'EMIT_CONSTANTS';
-    if ($ENV{$env_name}) {
-        require Data::Dump::Streamer;
-        Data::Dump::Streamer::Dump([
-            \&TEST_CONSTANT_CONST,
-            \&TEST_CONSTANT_VARIABLE,
-            \&TEST_CONSTANT_RECURSIVE,
-            \&TEST_CONSTANT_OVERRIDDEN_ENV_NAME,
-        ])->To(\*STDERR)->Out();
-    } else {
-        skip "Set \$ENV{$env_name} to show the emitted constants", 1;
-    }
-}
