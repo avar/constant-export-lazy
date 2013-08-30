@@ -2,6 +2,14 @@ package TestSimple;
 use strict;
 use warnings;
 our $CALL_COUNTER;
+use Exporter 'import';
+use constant {
+    CONST_OLD_1 => 123,
+    CONST_OLD_2 => 456,
+};
+BEGIN {
+    our @EXPORT_OK = qw(CONST_OLD_1 CONST_OLD_2);
+}
 use Constant::Export::Lazy (
     constants => {
         TEST_CONSTANT_CONST => sub {
@@ -42,6 +50,7 @@ use Constant::Export::Lazy (
         },
     },
     options => {
+        wrap_existing_import => 1,
         override => sub {
             my ($ctx, $name) = @_;
 
@@ -65,6 +74,8 @@ BEGIN {
 }
 BEGIN {
     TestSimple->import(qw(
+        CONST_OLD_1
+        CONST_OLD_2
         TEST_CONSTANT_CONST
         TEST_CONSTANT_VARIABLE
         TEST_CONSTANT_RECURSIVE
@@ -72,8 +83,10 @@ BEGIN {
     ))
 }
 
+is(CONST_OLD_1, 123, "We got a constant from the Exporter::import");
+is(CONST_OLD_2, 456, "We got a constant from the Exporter::import");
 is(TEST_CONSTANT_CONST, 1, "Simple constant sub");
-is(TEST_CONSTANT_VARIABLE, 6, "Variadic, should still be constant, TODO check that");
-is(TEST_CONSTANT_RECURSIVE, 7, "A constant sub that's recursive");
+is(TEST_CONSTANT_VARIABLE, 6, "Constant composed with some variables");
+is(TEST_CONSTANT_RECURSIVE, 7, "Constant looked up via \$ctx->call(...)");
 is(TEST_CONSTANT_OVERRIDDEN_ENV_NAME, 42, "We properly defined a constant with some overriden options");
 is($TestSimple::CALL_COUNTER, 4, "We didn't redundantly call various subs, we cache them in the stash");
