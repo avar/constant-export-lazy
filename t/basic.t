@@ -24,6 +24,16 @@ use Constant::Export::Lazy (
             my $y = 2;
             $x + $y;
         },
+        TEST_CONSTANT_REQUESTED => sub {
+            $CALL_COUNTER++;
+            my ($ctx) = @_;
+            $ctx->call('TEST_CONSTANT_NOT_REQUESTED');
+
+        },
+        TEST_CONSTANT_NOT_REQUESTED => sub {
+            $CALL_COUNTER++;
+            98765;
+        },
         TEST_CONSTANT_RECURSIVE => sub {
             $CALL_COUNTER++;
             my ($ctx) = @_;
@@ -111,6 +121,7 @@ BEGIN {
         TEST_CONSTANT_RECURSIVE
         TEST_CONSTANT_OVERRIDDEN_ENV_NAME
         TEST_AFTER_OVERRIDE
+        TEST_CONSTANT_REQUESTED
     ))
 }
 
@@ -120,7 +131,12 @@ is(TEST_CONSTANT_CONST, 1, "Simple constant sub");
 is(TEST_CONSTANT_VARIABLE, 6, "Constant composed with some variables");
 is(TEST_CONSTANT_RECURSIVE, 7, "Constant looked up via \$ctx->call(...)");
 is(TEST_CONSTANT_OVERRIDDEN_ENV_NAME, 42, "We properly defined a constant with some overriden options");
-is($TestSimple::CALL_COUNTER, 5, "We didn't redundantly call various subs, we cache them in the stash");
+is(TEST_CONSTANT_REQUESTED, 98765, "Our requested constant has the right value");
+ok(!exists &TEST_CONSTANT_NOT_REQUESTED, "We shouldn't import TEST_CONSTANT_NOT_REQUESTED into this namespace...");
+is(TestSimple::TEST_CONSTANT_NOT_REQUESTED, 98765, "...but it should be defined in TestSimple::* so it'll be re-used as well");
+
+# Afterwards check that the counters are OK
+is($TestSimple::CALL_COUNTER, 7, "We didn't redundantly call various subs, we cache them in the stash");
 is($TestSimple::AFTER_COUNTER, $TestSimple::CALL_COUNTER, "Our AFTER counter is always the same as our CALL counter, we only call this for interned values");
 is(TEST_AFTER_OVERRIDE, 123456, "We have TEST_AFTER_OVERRIDE defined");
 is($TestSimple::AFTER_OVERRIDE_COUNTER, 1, "We correctly call 'after' overrides");
@@ -135,5 +151,7 @@ BEGIN {
 }
 
 user::is(TEST_CONSTANT_CONST, 1, "Simple constant sub for subclass testing");
-user::is($TestSimple::CALL_COUNTER, 5, "We didn't redundantly call various subs, we cache them in the stash, even if someone subclasses the class");
+
+# Afterwards check that the counters are OK
+user::is($TestSimple::CALL_COUNTER, 7, "We didn't redundantly call various subs, we cache them in the stash, even if someone subclasses the class");
 user::is($TestSimple::AFTER_COUNTER, $TestSimple::CALL_COUNTER, "Our AFTER counter is always the same as our CALL counter, we only call this for interned values, even if someone subclasses the class");

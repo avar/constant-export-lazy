@@ -87,7 +87,7 @@ sub import {
         my @leftover_gimme;
         for my $gimme (@gimme) {
             if (exists $constants->{$gimme}) {
-                $ctx->call($gimme);
+                $ctx->call($gimme, { should_alias => 1});
             } elsif ($wrap_existing_import) {
                 push @leftover_gimme => $gimme;
             } else {
@@ -156,7 +156,8 @@ sub new {
 our $GETTING_VALUE_FOR_OVERRIDE;
 
 sub call {
-    my ($ctx, $gimme) = @_;
+    my ($ctx, $gimme, $options) = @_;
+    $options ||= {};
 
     # Unpack our options
     my $symtab       = $ctx->{symtab};
@@ -221,7 +222,7 @@ sub call {
         }
     }
 
-    unless ($GETTING_VALUE_FOR_OVERRIDE) {
+    if (not $GETTING_VALUE_FOR_OVERRIDE and $options->{should_alias}) {
         no strict 'refs';
         # Alias e.g. user::CONSTANT to YourExporter::CONSTANT
         *$alias_as = *$glob_name;
