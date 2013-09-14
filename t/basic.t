@@ -88,7 +88,12 @@ use Constant::Export::Lazy (
     },
 );
 
-package main;
+package TestSimple::Subclass;
+use strict;
+use warnings;
+BEGIN { our @ISA = qw(TestSimple) }
+
+package user;
 use strict;
 use warnings;
 use lib 't/lib';
@@ -119,3 +124,16 @@ is($TestSimple::CALL_COUNTER, 5, "We didn't redundantly call various subs, we ca
 is($TestSimple::AFTER_COUNTER, $TestSimple::CALL_COUNTER, "Our AFTER counter is always the same as our CALL counter, we only call this for interned values");
 is(TEST_AFTER_OVERRIDE, 123456, "We have TEST_AFTER_OVERRIDE defined");
 is($TestSimple::AFTER_OVERRIDE_COUNTER, 1, "We correctly call 'after' overrides");
+
+package another::user;
+use strict;
+use warnings;
+BEGIN {
+    TestSimple::Subclass->import(qw(
+        TEST_CONSTANT_CONST
+    ))
+}
+
+user::is(TEST_CONSTANT_CONST, 1, "Simple constant sub for subclass testing");
+user::is($TestSimple::CALL_COUNTER, 5, "We didn't redundantly call various subs, we cache them in the stash, even if someone subclasses the class");
+user::is($TestSimple::AFTER_COUNTER, $TestSimple::CALL_COUNTER, "Our AFTER counter is always the same as our CALL counter, we only call this for interned values, even if someone subclasses the class");

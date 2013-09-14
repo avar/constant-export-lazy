@@ -42,13 +42,31 @@ sub import {
         use strict;
         use warnings;
 
-        my ($pkg_stash, @gimme) = @_;
+        my (undef, @gimme) = @_;
         my $pkg_importer = caller;
 
         my $ctx = Constant::Export::Lazy::Ctx->new(
             constants    => $constants,
-            pkg_stash    => $pkg_stash,
             pkg_importer => $pkg_importer,
+
+            # Note that when unpacking @_ above we threw away the
+            # package we're imported as from the user's perspective
+            # and are using our "real" calling package for $pkg_stash
+            # instead.
+            #
+            # This is because if we have a My::Constants package as
+            # $caller but someone subclasses My::Constants for
+            # whatever reason as say My::Constants::Subclass we don't
+            # want to be sticking generated subroutines in both the
+            # My::Constants and My::Constants::Subclass namespaces.
+            #
+            # This is because we want to guarantee that we only ever
+            # call each generator subroutine once, even in the face of
+            # subclassing. Maybe I should lift this restriction or
+            # make it an option, e.g. if you want to have a constant
+            # for "when I was compiled" it would be useful if
+            # subclassing actually re-generated constants.
+            pkg_stash => $caller,
 
             # This is the symbol table for the package that's implementing
             # the constant exporter, not the user package requesting
@@ -59,7 +77,7 @@ sub import {
             # requests it.
             symtab       => do {
                 no strict 'refs';
-                \%{"${pkg_stash}::"};
+                \%{"${caller}::"};
             },
         );
 
