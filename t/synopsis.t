@@ -16,6 +16,7 @@ use My::Constants qw(
     B
     SUM
     PI
+    LIST
 );
 
 is(X, -2);
@@ -24,3 +25,4 @@ is(A, 1);
 is(B, 3);
 is(SUM, 4);
 is(PI,  "Pi is = 3.14159");
+is(join(",", @{LIST()}), '3,4');

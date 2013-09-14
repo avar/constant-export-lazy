@@ -317,23 +317,37 @@ write using C<Constant::Export::Lazy>:
     our @EXPORT_OK = qw(X Y);
     use Constant::Export::Lazy (
         constants => {
+            # This is the simplest way to go, just define plain constant
+            # values.
             A => sub { 1 },
             B => sub { 2 },
+            # You get a $ctx object that you can ->call() to retrieve the
+            # values of other constants. This is how you can make some
+            # constants depend on others without worrying about
+            # ordering. Constants are still guaranteed to only be
+            # fleshened once!
             SUM => sub {
-                # You get a $ctx object that you can ->call() to retrieve
-                # the values of other constants if some of your constants
-                # depend on others. Constants are still guaranteed to only
-                # be fleshened once!
                 my ($ctx) = @_;
                 $ctx->call('A') + $ctx->call('B'),
             },
             # We won't call this and die unless someone requests it when
             # they import us.
             DIE => sub { die },
+            # These subroutines are always called in scalar context, and
+            # thus We'll return [3..4] here.
+            #
+            # Unlike the constant.pm that ships with perl itself we don't
+            # support returning lists (there's no such things as constant
+            # list subroutines, constant.pm fakes it with a non-inlined
+            # sub). So if you want to return lists you have to return a
+            # reference to one.
+            LIST => sub { wantarray ? (1..2) : [3..4] },
+            # We can also supply a HashRef with "call" with the sub, and
+            # "options" with options that clobber the global
+            # options. Actually when you supply just a plain sub instead
+            # of a HashRef we internally munge it to look like this more
+            # verbose (and more flexible) structure.
             PI  => {
-                # We can also supply a HashRef with "call" with the sub,
-                # and "options" with options that clobber the global
-                # options.
                 call    => sub { 3.14 },
                 options => {
                     override => sub {
@@ -381,6 +395,7 @@ And this is an example of using it in some user code:
         B
         SUM
         PI
+        LIST
     );
 
     is(X, -2);
@@ -389,6 +404,7 @@ And this is an example of using it in some user code:
     is(B, 3);
     is(SUM, 4);
     is(PI,  "Pi is = 3.14159");
+    is(join(",", @{LIST()}), '3,4');
 
 Things to note about this example:
 

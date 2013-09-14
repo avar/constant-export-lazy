@@ -39,6 +39,10 @@ use Constant::Export::Lazy (
             my ($ctx) = @_;
             $ctx->call('TEST_CONSTANT_VARIABLE') + 1;
         },
+        TEST_LIST => sub {
+            $CALL_COUNTER++;
+            wantarray ? (1..2) : [3..4];
+        },
         DO_NOT_CALL_THIS => sub {
             $CALL_COUNTER++;
             die "This should not be called";
@@ -122,6 +126,7 @@ BEGIN {
         TEST_CONSTANT_OVERRIDDEN_ENV_NAME
         TEST_AFTER_OVERRIDE
         TEST_CONSTANT_REQUESTED
+        TEST_LIST
     ))
 }
 
@@ -134,6 +139,7 @@ is(TEST_CONSTANT_OVERRIDDEN_ENV_NAME, 42, "We properly defined a constant with s
 is(TEST_CONSTANT_REQUESTED, 98765, "Our requested constant has the right value");
 ok(!exists &TEST_CONSTANT_NOT_REQUESTED, "We shouldn't import TEST_CONSTANT_NOT_REQUESTED into this namespace...");
 is(TestSimple::TEST_CONSTANT_NOT_REQUESTED, 98765, "...but it should be defined in TestSimple::* so it'll be re-used as well");
+is(join(",", @{TEST_LIST()}), '3,4');
 
 # Afterwards check that the counters are OK
 our $call_counter = 8;
