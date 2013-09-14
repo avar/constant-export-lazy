@@ -39,7 +39,7 @@ use Constant::Export::Lazy (
         # options. Actually when you supply just a plain sub instead
         # of a HashRef we internally munge it to look like this more
         # verbose (and more flexible) structure.
-        PI  => {
+        PI => {
             call    => sub { 3.14 },
             options => {
                 override => sub {
