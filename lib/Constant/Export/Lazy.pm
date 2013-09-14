@@ -267,9 +267,9 @@ whatever), and we only call the callbacks lazily if someone actually
 requests that a constant of ours be defined.
 
 This makes it easy to have one file that runs in different
-environments and e.g. generates some subset of its constants with a
-module that you may not want to use, or may not be available in all
-your environments. You can just C<require> it in the callback that
+environments and generates some subset of its constants with a module
+that you may not want to use, or may not be available in all your
+environments. You can just C<require> it in the callback that
 generates the constant that requires it.
 
 =item * It makes it easier to manage creating constants that require other constants
