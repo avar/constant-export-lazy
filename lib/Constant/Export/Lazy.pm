@@ -257,12 +257,12 @@ Constant::Export::Lazy - Utility to write lazy exporters of constant subroutines
 =head1 DESCRIPTION
 
 This is a utility to write lazy exporters of constant
-subroutines. I.e. it's not meant to be a user-facing constant
-exporting API, it's meant to write user-facing constant exporting
+subroutines. It's not meant to be a user-facing constant exporting
+API, it's something you use to write user-facing constant exporting
 APIs.
 
-There's dozens of similar constant defining modules on the CPAN, why
-did I need to write this one?
+There's dozens of similar constant defining modules and exporters on
+the CPAN, why did I need to write this one?
 
 =over
 
@@ -285,7 +285,7 @@ Maybe you have one constant indicating whether you're running in a dev
 environment, and a bunch of other constants that are defined
 differently if the dev environment constant is true.
 
-Now imagine you have several hundred constants like that, managing the
+Now say you have several hundred constants like that, managing the
 inter-dependencies and that everything is defined in the right order
 quickly gets messy.
 
@@ -302,9 +302,10 @@ be careful not to introduce circular dependencies.
 
 =head1 SYNOPSIS
 
-So how does all this work? This example demonstrates all our
-features. This is an example of your C<My::Constants> package that you
-write using C<Constant::Export::Lazy>:
+So how does all this work? This increasingly verbose example
+demonstrates all our features. This is an example of your
+C<My::Constants> package that you write using
+C<Constant::Export::Lazy>:
 
     package My::Constants;
     use strict;
