@@ -103,7 +103,7 @@ use strict;
 use warnings;
 BEGIN { our @ISA = qw(TestSimple) }
 
-package user;
+package main;
 use strict;
 use warnings;
 use lib 't/lib';
@@ -136,12 +136,13 @@ ok(!exists &TEST_CONSTANT_NOT_REQUESTED, "We shouldn't import TEST_CONSTANT_NOT_
 is(TestSimple::TEST_CONSTANT_NOT_REQUESTED, 98765, "...but it should be defined in TestSimple::* so it'll be re-used as well");
 
 # Afterwards check that the counters are OK
-is($TestSimple::CALL_COUNTER, 7, "We didn't redundantly call various subs, we cache them in the stash");
+our $call_counter = 8;
+is($TestSimple::CALL_COUNTER, $call_counter, "We didn't redundantly call various subs, we cache them in the stash");
 is($TestSimple::AFTER_COUNTER, $TestSimple::CALL_COUNTER, "Our AFTER counter is always the same as our CALL counter, we only call this for interned values");
 is(TEST_AFTER_OVERRIDE, 123456, "We have TEST_AFTER_OVERRIDE defined");
 is($TestSimple::AFTER_OVERRIDE_COUNTER, 1, "We correctly call 'after' overrides");
 
-package another::user;
+package main::frame;
 use strict;
 use warnings;
 BEGIN {
@@ -150,8 +151,8 @@ BEGIN {
     ))
 }
 
-user::is(TEST_CONSTANT_CONST, 1, "Simple constant sub for subclass testing");
+main::is(TEST_CONSTANT_CONST, 1, "Simple constant sub for subclass testing");
 
 # Afterwards check that the counters are OK
-user::is($TestSimple::CALL_COUNTER, 7, "We didn't redundantly call various subs, we cache them in the stash, even if someone subclasses the class");
-user::is($TestSimple::AFTER_COUNTER, $TestSimple::CALL_COUNTER, "Our AFTER counter is always the same as our CALL counter, we only call this for interned values, even if someone subclasses the class");
+main::is($TestSimple::CALL_COUNTER, $main::call_counter, "We didn't redundantly call various subs, we cache them in the stash, even if someone subclasses the class");
+main::is($TestSimple::AFTER_COUNTER, $TestSimple::CALL_COUNTER, "Our AFTER counter is always the same as our CALL counter, we only call this for interned values, even if someone subclasses the class");
