@@ -91,7 +91,7 @@ sub import {
             } elsif ($wrap_existing_import) {
                 push @leftover_gimme => $gimme;
             } else {
-                die "PANIC: We don't have the constant '$gimme' to export to you" unless $wrap_existing_import;
+                die "PANIC: We don't have the constant '$gimme' to export to you";
             }
         }
 
