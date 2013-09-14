@@ -75,7 +75,7 @@ sub import {
             # Really important distinction because we never want to
             # re-generate the same constant again when another package
             # requests it.
-            symtab       => do {
+            symtab => do {
                 no strict 'refs';
                 \%{"${caller}::"};
             },
