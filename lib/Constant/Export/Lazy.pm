@@ -87,7 +87,7 @@ sub import {
         my @leftover_gimme;
         for my $gimme (@gimme) {
             if (exists $constants->{$gimme}) {
-                $ctx->call($gimme, { should_alias => 1});
+                $ctx->call($gimme);
             } elsif ($wrap_existing_import) {
                 push @leftover_gimme => $gimme;
             } else {
@@ -153,11 +153,11 @@ sub new {
     bless \%args => $class;
 }
 
+our $CALL_SHOULD_NOT_ALIAS;
 our $GETTING_VALUE_FOR_OVERRIDE;
 
 sub call {
-    my ($ctx, $gimme, $options) = @_;
-    $options ||= {};
+    my ($ctx, $gimme) = @_;
 
     # Unpack our options
     my $symtab       = $ctx->{symtab};
@@ -179,6 +179,12 @@ sub call {
             $value = &$symtab_value();
         }
     } else {
+        # We only want to alias constants into the importer's package
+        # if the constant is on the import list, not if it's just
+        # needed within some $ctx->call() when defining another
+        # constant.
+        local $CALL_SHOULD_NOT_ALIAS = 1;
+
         my $override = $constants->{$gimme}->{options}->{override};
         my $stash    = $constants->{$gimme}->{options}->{stash};
         local $ctx->{stash} = $stash;
@@ -222,7 +228,7 @@ sub call {
         }
     }
 
-    if (not $GETTING_VALUE_FOR_OVERRIDE and $options->{should_alias}) {
+    unless ($CALL_SHOULD_NOT_ALIAS) {
         no strict 'refs';
         # Alias e.g. user::CONSTANT to YourExporter::CONSTANT
         *$alias_as = *$glob_name;
