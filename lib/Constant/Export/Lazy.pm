@@ -187,7 +187,14 @@ sub call {
 
         my $override = $constants->{$gimme}->{options}->{override};
         my $stash    = $constants->{$gimme}->{options}->{stash};
+
+        # Only pass the stash around if we actually have it. Note that
+        # "delete local $ctx->{stash}" is a feature new in 5.12.0, so
+        # we can't use it. See
+        # http://perldoc.perl.org/5.12.0/perldelta.html#delete-local
         local $ctx->{stash} = $stash;
+        delete $ctx->{stash} unless ref $stash;
+
         my @overriden_value;
         my $source;
         if ($override and !$GETTING_VALUE_FOR_OVERRIDE) {
@@ -240,7 +247,8 @@ sub call {
 sub stash {
     my ($ctx) = @_;
 
-    # TODO: Die if this doesn't exist?
+    die "PANIC: You've called \$ctx->stash with no stash defined!" unless exists $ctx->{stash};
+
     $ctx->{stash};
 }
 

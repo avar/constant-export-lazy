@@ -81,6 +81,21 @@ use Constant::Export::Lazy (
                 $ctx->stash->{some_value};
             },
         },
+        TEST_NO_STASH => {
+            call => sub {
+                my ($ctx) = @_;
+                $CALL_COUNTER++;
+                my $ret;
+                eval {
+                    $ctx->stash;
+                    1;
+                } or do {
+                    my $error = $@ || "Zombie Error";
+                    $ret = $error;
+                };
+                return $ret;
+            },
+        },
     },
     options => {
         wrap_existing_import => 1,
@@ -127,6 +142,7 @@ BEGIN {
         TEST_AFTER_OVERRIDE
         TEST_CONSTANT_REQUESTED
         TEST_LIST
+        TEST_NO_STASH
     ))
 }
 
@@ -140,9 +156,10 @@ is(TEST_CONSTANT_REQUESTED, 98765, "Our requested constant has the right value")
 ok(!exists &TEST_CONSTANT_NOT_REQUESTED, "We shouldn't import TEST_CONSTANT_NOT_REQUESTED into this namespace...");
 is(TestSimple::TEST_CONSTANT_NOT_REQUESTED, 98765, "...but it should be defined in TestSimple::* so it'll be re-used as well");
 is(join(",", @{TEST_LIST()}), '3,4');
+like(TEST_NO_STASH, qr/PANIC: You've called \$ctx->stash with no stash defined!/, "Error on invalid stash usage");
 
 # Afterwards check that the counters are OK
-our $call_counter = 8;
+our $call_counter = 9;
 is($TestSimple::CALL_COUNTER, $call_counter, "We didn't redundantly call various subs, we cache them in the stash");
 is($TestSimple::AFTER_COUNTER, $TestSimple::CALL_COUNTER, "Our AFTER counter is always the same as our CALL counter, we only call this for interned values");
 is(TEST_AFTER_OVERRIDE, 123456, "We have TEST_AFTER_OVERRIDE defined");
