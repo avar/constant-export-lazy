@@ -532,10 +532,11 @@ latter, i.e. C<CONST => sub {...}> becomes C<CONST => { call => sub {
 
 =head3 call
 
-The subroutine we'll call with a L</context object|/CONTEXT OBJECT> to
-fleshen the constant. It's guaranteed that this sub will only ever be
-called once for the lifetime of the process, except if you manually
-call it multiple times during an L</override>.
+The subroutine we'll call with a L<context
+object|Constant::Export::Lazy/"CONTEXT OBJECT"> to fleshen the
+constant. It's guaranteed that this sub will only ever be called once
+for the lifetime of the process, except if you manually call it
+multiple times during an L</override>.
 
 =head3 options (local)
 
@@ -570,9 +571,10 @@ the same time. This allows you to do so incrementally.
 =head3 override
 
 This callback can be defined either globally or locally and will be
-called instead of your C<call>. In addition to the L</context
-object|/CONTEXT OBJECT> this will also get an argument to the C<$name>
-of the constant that we're requesting an override for.
+called instead of your C<call>. In addition to the L<context
+object|Constant::Export::Lazy/"CONTEXT OBJECT"> this will also get an
+argument to the C<$name> of the constant that we're requesting an
+override for.
 
 This can be used for things like overriding default values based on
 entries in C<%ENV> (see the L</SYNOPSIS>), or anything else you can
@@ -598,12 +600,13 @@ discussed in L</It's lazy> and L</call>).
 =head3 after
 
 This callback will be called after we've just interned a new constant
-into the symbol table. In addition to the L</context object|/CONTEXT
-OBJECT> this will also get C<$name>, C<$value> and C<$source>
-arguments. The C<$name> argument is the name of the constant we just
-defined, C<$value> is its value, and C<$source> is either
-C<"override"> or C<"callback"> depending on how the constant was
-defined. I.e. via L</override> or directly via L</call>.
+into the symbol table. In addition to the L<context
+object|Constant::Export::Lazy/"CONTEXT OBJECT"> this will also get
+C<$name>, C<$value> and C<$source> arguments. The C<$name> argument is
+the name of the constant we just defined, C<$value> is its value, and
+C<$source> is either C<"override"> or C<"callback"> depending on how
+the constant was defined. I.e. via L</override> or directly via
+L</call>.
 
 This was added to support replacing modules that in addition to just
 defining constants might also want to check them for well-formedness
@@ -614,11 +617,11 @@ out "all known settings".
 =head3 stash
 
 This is a reference that you can provide for your own use, we don't
-care what's in it. It'll be accessible via the L</context
-object|/CONTEXT OBJECT>'s C<stash> method (e.g. C<<my $stash =
-$ctx->stash> for L</call>, C</override> and C</after> calls relevant
-to its scope, i.e. global if you define it globally, otherwise local
-if it's defined locally.
+care what's in it. It'll be accessible via the L<context
+object|Constant::Export::Lazy/"CONTEXT OBJECT">'s C<stash> method
+(e.g. C<<my $stash = $ctx->stash> for L</call>, C</override> and
+C</after> calls relevant to its scope, i.e. global if you define it
+globally, otherwise local if it's defined locally.
 
 =head1 CONTEXT OBJECT
 
