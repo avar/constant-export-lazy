@@ -369,10 +369,10 @@ be careful not to introduce circular dependencies.
 
 =head1 SYNOPSIS
 
-So how does all this work? This increasingly verbose example
-demonstrates all our features. This is an example of your
+So how does all this work? This increasingly verbose example of your
 C<My::Constants> package that you write using
-C<Constant::Export::Lazy>:
+C<Constant::Export::Lazy> demonstrates all our features (from
+F<t/lib/My/Constants.pm> in the source distro):
 
     package My::Constants;
     use strict;
@@ -397,6 +397,12 @@ C<Constant::Export::Lazy>:
             SUM => sub {
                 my ($ctx) = @_;
                 $ctx->call('A') + $ctx->call('B'),
+            },
+            # For convenience you can also access other constants,
+            # e.g. those defined with constant.pm
+            SUM_INTEROP => sub {
+                my ($ctx) = @_;
+                $ctx->call('X') + $ctx->call('Y'),
             },
             # We won't call this and die unless someone requests it when
             # they import us.
@@ -425,6 +431,15 @@ C<Constant::Export::Lazy>:
                         # want the constant to be undef.
                         return $ENV{PI} ? "Pi is = $ENV{PI}" : $ctx->call($name);
                     },
+                    # This is an optional ref that'll be accessible via
+                    # $ctx->stash in any subs relevant to this constant
+                    # (call, override, after, ...)
+                    stash => {
+                        # This `typecheck_rx` is in no way supported by
+                        # Constant::Export::Lazy, it's just something
+                        # we're passing around to the 'after' sub below.
+                        typecheck_rx => qr/\d+\.\d+/s, # such an epicly buggy typecheck...
+                    },
                 },
             },
         },
@@ -438,12 +453,25 @@ C<Constant::Export::Lazy>:
                 return unless exists $ENV{$name};
                 return $ENV{$name};
             },
+            after => sub {
+                my ($ctx, $name, $value, $source) = @_;
+
+                if (defined(my $stash = $ctx->stash)) {
+                    my $typecheck_rx = $stash->{typecheck_rx};
+                    die "PANIC: The value <$value> for <$name> doesn't pass <$typecheck_rx>"
+                        unless $value =~ $typecheck_rx;
+                }
+
+                print STDERR "Defined the constant <$name> with value <$value> from <$source>\n" if $ENV{DEBUG};
+                return;
+            },
         },
     );
 
     1;
 
-And this is an example of using it in some user code:
+And this is an example of using it in some user code (from
+F<t/synopsis.t> in the source distro):
 
     package My::User::Code;
     use strict;
@@ -462,6 +490,7 @@ And this is an example of using it in some user code:
         A
         B
         SUM
+        SUM_INTEROP
         PI
         LIST
     );
@@ -471,8 +500,28 @@ And this is an example of using it in some user code:
     is(A, 1);
     is(B, 3);
     is(SUM, 4);
+    is(SUM_INTEROP, -3);
     is(PI,  "Pi is = 3.14159");
     is(join(",", @{LIST()}), '3,4');
+
+And running it gives:
+
+    $ DEBUG=1 perl -Ilib t/synopsis.t
+    Defined the constant <A> with value <1> from <callback>
+    Defined the constant <B> with value <3> from <override>
+    Defined the constant <SUM> with value <4> from <callback>
+    Defined the constant <SUM_INTEROP> with value <-3> from <callback>
+    Defined the constant <PI> with value <Pi is = 3.14159> from <override>
+    Defined the constant <LIST> with value <ARRAY(0x16b8918)> from <callback>
+    ok 1
+    ok 2
+    ok 3
+    ok 4
+    ok 5
+    ok 6
+    ok 7
+    ok 8
+    1..8
 
 Things to note about this example:
 

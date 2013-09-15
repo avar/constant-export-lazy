@@ -22,6 +22,12 @@ use Constant::Export::Lazy (
             my ($ctx) = @_;
             $ctx->call('A') + $ctx->call('B'),
         },
+        # For convenience you can also access other constants,
+        # e.g. those defined with constant.pm
+        SUM_INTEROP => sub {
+            my ($ctx) = @_;
+            $ctx->call('X') + $ctx->call('Y'),
+        },
         # We won't call this and die unless someone requests it when
         # they import us.
         DIE => sub { die },
@@ -49,6 +55,15 @@ use Constant::Export::Lazy (
                     # want the constant to be undef.
                     return $ENV{PI} ? "Pi is = $ENV{PI}" : $ctx->call($name);
                 },
+                # This is an optional ref that'll be accessible via
+                # $ctx->stash in any subs relevant to this constant
+                # (call, override, after, ...)
+                stash => {
+                    # This `typecheck_rx` is in no way supported by
+                    # Constant::Export::Lazy, it's just something
+                    # we're passing around to the 'after' sub below.
+                    typecheck_rx => qr/\d+\.\d+/s, # such an epicly buggy typecheck...
+                },
             },
         },
     },
@@ -61,6 +76,18 @@ use Constant::Export::Lazy (
             my ($ctx, $name) = @_;
             return unless exists $ENV{$name};
             return $ENV{$name};
+        },
+        after => sub {
+            my ($ctx, $name, $value, $source) = @_;
+
+            if (defined(my $stash = $ctx->stash)) {
+                my $typecheck_rx = $stash->{typecheck_rx};
+                die "PANIC: The value <$value> for <$name> doesn't pass <$typecheck_rx>"
+                    unless $value =~ $typecheck_rx;
+            }
+
+            print STDERR "Defined the constant <$name> with value <$value> from <$source>\n" if $ENV{DEBUG};
+            return;
         },
     },
 );
