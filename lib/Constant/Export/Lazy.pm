@@ -238,18 +238,17 @@ sub call {
             #  * perl-5.005_02-225-g779c5bc - first core support
             #    for these kinds of constants in the optree.
             #
-            # * perl-5.8.0-6623-ge040ff7 - first use in
-            #   constant.pm.
+            # * perl-5.9.2-1966-ge040ff7 - first use in constant.pm.
             #
-            # * perl-5.8.0-6638-ge1234d8 - first attempts to
+            # * perl-5.9.2-1981-ge1234d8 - first attempts to
             #   invalidate the method cache with
             #   Internals::inc_sub_generation()
             #
-            # * perl-5.8.0-10189-ge1a479c -
+            # * perl-5.9.4-1684-ge1a479c -
             #   Internals::inc_sub_generation() in constant.pm
             #   replaced with mro::method_changed_in($pkg)
             #
-            #  * perl-5.8.0-10219-g41892db - Now unused
+            #  * perl-5.9.4-1714-g41892db - Now unused
             #    Internals::inc_sub_generation() removed from the
             #    core.
             #
