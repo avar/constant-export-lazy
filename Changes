@@ -2,6 +2,26 @@ Revision history for Constant::Export::Lazy
 
 {{$NEXT}}
 
+    - Huge release with lots of new features and bugfixes.
+
+    - Added an 'after' callback.
+
+    - Added a 'stash' method / option.
+
+    - Don't re-generate constants if someone subclasses the consatnt
+      exporter.
+
+    - Only export constant when explicitly requested, not everything
+      we $ctx->call(...). Removes leaks in the API.
+
+    - Correct behavior for skipping the interning of constants in the
+      stash during override *only* for those constants we're
+      overriding, not everything else.
+
+    - Add tests for interop with constant.pm
+
+    - Huge POD rewrite and lots of tests / examples added.
+
 0.01 2013-08-30 12:32:23
 
     - Initial version
