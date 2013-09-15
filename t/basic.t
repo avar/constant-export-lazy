@@ -110,15 +110,7 @@ use Constant::Export::Lazy (
             call => sub {
                 my ($ctx) = @_;
                 $CALL_COUNTER++;
-                my $ret;
-                eval {
-                    $ctx->stash;
-                    1;
-                } or do {
-                    my $error = $@ || "Zombie Error";
-                    $ret = $error;
-                };
-                return $ret;
+                $ctx->stash;
             },
         },
     },
@@ -184,7 +176,7 @@ is(TEST_CONSTANT_REQUESTED, 98765, "Our requested constant has the right value")
 ok(!exists &TEST_CONSTANT_NOT_REQUESTED, "We shouldn't import TEST_CONSTANT_NOT_REQUESTED into this namespace...");
 is(TestSimple::TEST_CONSTANT_NOT_REQUESTED, 98765, "...but it should be defined in TestSimple::* so it'll be re-used as well");
 is(join(",", @{TEST_LIST()}), '3,4');
-like(TEST_NO_STASH, qr/PANIC: You've called \$ctx->stash with no stash defined!/, "Error on invalid stash usage");
+is(TEST_NO_STASH, undef, "We'll return undef if we have no stash");
 
 # Afterwards check that the counters are OK
 our $call_counter = 11;
