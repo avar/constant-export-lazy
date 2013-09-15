@@ -47,13 +47,33 @@ use Constant::Export::Lazy (
             $CALL_COUNTER++;
             die "This should not be called";
         },
+        TEST_CONSTANT_CALLED_FROM_OVERRIDDEN_ENV_NAME => {
+            # We should not only call but also intern this constant.
+            options => {
+                after => sub {
+                    $AFTER_COUNTER++;
+                    return;
+                },
+                override => sub {
+                    my ($ctx, $name) = @_;
+                    # We should still call overrides for things that
+                    # are called from *other* stuff that's being
+                    # overriden.
+                    return 1 + $ctx->call($name);
+                },
+            },
+            call => sub {
+                $CALL_COUNTER++;
+                1;
+            },
+        },
         TEST_CONSTANT_OVERRIDDEN_ENV_NAME => {
             options => {
                 override => sub {
                     my ($ctx, $name) = @_;
 
                     if (exists $ENV{OVERRIDDEN_ENV_NAME}) {
-                        my $value = $ctx->call($name);
+                        my $value = $ctx->call($name) + $ctx->call('TEST_CONSTANT_CALLED_FROM_OVERRIDDEN_ENV_NAME');
                         return $ENV{OVERRIDDEN_ENV_NAME} + $value;
                     }
                     return;
@@ -129,7 +149,7 @@ use lib 't/lib';
 use Test::More 'no_plan';
 BEGIN {
     $ENV{TEST_CONSTANT_VARIABLE} = 2;
-    $ENV{OVERRIDDEN_ENV_NAME} = 3;
+    $ENV{OVERRIDDEN_ENV_NAME} = 1;
 }
 BEGIN {
     TestSimple->import(qw(
@@ -152,6 +172,7 @@ is(TEST_CONSTANT_CONST, 1, "Simple constant sub");
 is(TEST_CONSTANT_VARIABLE, 6, "Constant composed with some variables");
 is(TEST_CONSTANT_RECURSIVE, 7, "Constant looked up via \$ctx->call(...)");
 is(TEST_CONSTANT_OVERRIDDEN_ENV_NAME, 42, "We properly defined a constant with some overriden options");
+ok(exists &TestSimple::TEST_CONSTANT_CALLED_FROM_OVERRIDDEN_ENV_NAME, "We fleshened unrelated TEST_CONSTANT_CALLED_FROM_OVERRIDDEN_ENV_NAME though");
 is(TEST_CONSTANT_REQUESTED, 98765, "Our requested constant has the right value");
 ok(!exists &TEST_CONSTANT_NOT_REQUESTED, "We shouldn't import TEST_CONSTANT_NOT_REQUESTED into this namespace...");
 is(TestSimple::TEST_CONSTANT_NOT_REQUESTED, 98765, "...but it should be defined in TestSimple::* so it'll be re-used as well");
@@ -159,7 +180,7 @@ is(join(",", @{TEST_LIST()}), '3,4');
 like(TEST_NO_STASH, qr/PANIC: You've called \$ctx->stash with no stash defined!/, "Error on invalid stash usage");
 
 # Afterwards check that the counters are OK
-our $call_counter = 9;
+our $call_counter = 10;
 is($TestSimple::CALL_COUNTER, $call_counter, "We didn't redundantly call various subs, we cache them in the stash");
 is($TestSimple::AFTER_COUNTER, $TestSimple::CALL_COUNTER, "Our AFTER counter is always the same as our CALL counter, we only call this for interned values");
 is(TEST_AFTER_OVERRIDE, 123456, "We have TEST_AFTER_OVERRIDE defined");

@@ -154,7 +154,7 @@ sub new {
 }
 
 our $CALL_SHOULD_NOT_ALIAS;
-our $GETTING_VALUE_FOR_OVERRIDE;
+our $GETTING_VALUE_FOR_OVERRIDE = {};
 
 sub call {
     my ($ctx, $gimme) = @_;
@@ -197,8 +197,8 @@ sub call {
 
         my @overriden_value;
         my $source;
-        if ($override and !$GETTING_VALUE_FOR_OVERRIDE) {
-            local $GETTING_VALUE_FOR_OVERRIDE = 1;
+        if ($override and not exists $GETTING_VALUE_FOR_OVERRIDE->{$gimme}) {
+            local $GETTING_VALUE_FOR_OVERRIDE->{$gimme} = undef;
             @overriden_value = $override->($ctx, $gimme);
         }
         if (@overriden_value) {
@@ -219,7 +219,7 @@ sub call {
         # the source for constant.pm and the tricks it
         # does. Possibly we want to use that. But this works
         # on older versions too.
-        unless ($GETTING_VALUE_FOR_OVERRIDE) {
+        unless (exists $GETTING_VALUE_FOR_OVERRIDE->{$gimme}) {
             no strict 'refs';
             *$glob_name = sub () { $value };
 
