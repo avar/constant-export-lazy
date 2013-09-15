@@ -3,6 +3,7 @@ use strict;
 use warnings;
 our $CALL_COUNTER;
 our $AFTER_COUNTER;
+our $OVERRIDE_COUNTER;
 our $AFTER_OVERRIDE_COUNTER;
 use Exporter 'import';
 use constant {
@@ -60,6 +61,7 @@ use Constant::Export::Lazy (
                     return;
                 },
                 override => sub {
+                    $OVERRIDE_COUNTER++;
                     my ($ctx, $name) = @_;
                     # We should still call overrides for things that
                     # are called from *other* stuff that's being
@@ -75,6 +77,7 @@ use Constant::Export::Lazy (
         TEST_CONSTANT_OVERRIDDEN_ENV_NAME => {
             options => {
                 override => sub {
+                    $OVERRIDE_COUNTER++;
                     my ($ctx, $name) = @_;
 
                     if (exists $ENV{OVERRIDDEN_ENV_NAME}) {
@@ -113,10 +116,21 @@ use Constant::Export::Lazy (
                 $ctx->stash;
             },
         },
+        TEST_NO_AFTER_NO_OVERRIDE => {
+            call => sub {
+                $CALL_COUNTER++;
+                'no_after_no_override';
+            },
+            options => {
+                after => undef,
+                override => undef,
+            },
+        },
     },
     options => {
         wrap_existing_import => 1,
         override => sub {
+            $OVERRIDE_COUNTER++;
             my ($ctx, $name) = @_;
 
             if (exists $ENV{$name}) {
@@ -161,6 +175,7 @@ BEGIN {
         TEST_CONSTANT_REQUESTED
         TEST_LIST
         TEST_NO_STASH
+        TEST_NO_AFTER_NO_OVERRIDE
     ))
 }
 
@@ -177,13 +192,16 @@ ok(!exists &TEST_CONSTANT_NOT_REQUESTED, "We shouldn't import TEST_CONSTANT_NOT_
 is(TestSimple::TEST_CONSTANT_NOT_REQUESTED, 98765, "...but it should be defined in TestSimple::* so it'll be re-used as well");
 is(join(",", @{TEST_LIST()}), '3,4');
 is(TEST_NO_STASH, undef, "We'll return undef if we have no stash");
+is(TEST_NO_AFTER_NO_OVERRIDE, 'no_after_no_override', "A constant that didn't call 'after' or 'override'");
 
 # Afterwards check that the counters are OK
-our $call_counter = 11;
+our $call_counter = 12;
+our $after_and_override_call_counter = $call_counter - 1;
 is($TestSimple::CALL_COUNTER, $call_counter, "We didn't redundantly call various subs, we cache them in the stash");
-is($TestSimple::AFTER_COUNTER, $TestSimple::CALL_COUNTER, "Our AFTER counter is always the same as our CALL counter, we only call this for interned values");
+is($TestSimple::AFTER_COUNTER, $after_and_override_call_counter, "Our AFTER counter is always the same as our CALL counter (unless 'after' is clobbered), we only call this for interned values");
 is(TEST_AFTER_OVERRIDE, 123456, "We have TEST_AFTER_OVERRIDE defined");
-is($TestSimple::AFTER_OVERRIDE_COUNTER, 1, "We correctly call 'after' overrides");
+is($TestSimple::AFTER_OVERRIDE_COUNTER, 1, "We correctly call 'after', except when they've been clobbered");
+is($TestSimple::OVERRIDE_COUNTER, $after_and_override_call_counter, "We correctly call overrides, except when they've been clobbered");
 
 package main::frame;
 use strict;
@@ -198,4 +216,4 @@ main::is(TEST_CONSTANT_CONST, 1, "Simple constant sub for subclass testing");
 
 # Afterwards check that the counters are OK
 main::is($TestSimple::CALL_COUNTER, $main::call_counter, "We didn't redundantly call various subs, we cache them in the stash, even if someone subclasses the class");
-main::is($TestSimple::AFTER_COUNTER, $TestSimple::CALL_COUNTER, "Our AFTER counter is always the same as our CALL counter, we only call this for interned values, even if someone subclasses the class");
+main::is($TestSimple::AFTER_COUNTER, $main::after_and_override_call_counter, "Our AFTER counter is always the same as our CALL counter (unless 'after' is clobbered), we only call this for interned values, even if someone subclasses the class");
