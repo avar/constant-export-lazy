@@ -319,58 +319,11 @@ __END__
 
 Constant::Export::Lazy - Utility to write lazy exporters of constant subroutines
 
-=head1 DESCRIPTION
-
-This is a utility to write lazy exporters of constant
-subroutines. It's not meant to be a user-facing constant exporting
-API, it's something you use to write user-facing constant exporting
-APIs.
-
-There's dozens of similar constant defining modules and exporters on
-the CPAN, why did I need to write this one?
-
-=over
-
-=item * It's lazy
-
-Our constants fleshened via callbacks that are guaranteed to be called
-only once for the lifetime of the process (not once per importer or
-whatever), and we only call the callbacks lazily if someone actually
-requests that a constant of ours be defined.
-
-This makes it easy to have one file that runs in different
-environments and generates some subset of its constants with a module
-that you may not want to use, or may not be available in all your
-environments. You can just C<require> it in the callback that
-generates the constant that requires it.
-
-=item * It makes it easier to manage creating constants that require other constants
-
-Maybe you have one constant indicating whether you're running in a dev
-environment, and a bunch of other constants that are defined
-differently if the dev environment constant is true.
-
-Now say you have several hundred constants like that, managing the
-inter-dependencies and that everything is defined in the right order
-quickly gets messy.
-
-Constant::Import::Lazy takes away all this complexity. When you define
-a constant you get a callback object that can give you the value of
-other constants, and will either generate them if they haven't been
-generated, or look them up in the symbol table if they have.
-
-Thus we end up with a Makefile-like system where you can freely use
-whatever other constants you like when defining your constants, just
-be careful not to introduce circular dependencies.
-
-=back
-
 =head1 SYNOPSIS
 
-So how does all this work? This increasingly verbose example of your
-C<My::Constants> package that you write using
-C<Constant::Export::Lazy> demonstrates all our features (from
-F<t/lib/My/Constants.pm> in the source distro):
+This increasingly verbose example of your C<My::Constants> package
+that you write using C<Constant::Export::Lazy> demonstrates all our
+features (from F<t/lib/My/Constants.pm> in the source distro):
 
     package My::Constants;
     use strict;
@@ -521,35 +474,179 @@ And running it gives:
     ok 8
     1..8
 
-Things to note about this example:
+=head1 DESCRIPTION
+
+This is a utility to write lazy exporters of constant
+subroutines. It's not meant to be a user-facing constant exporting
+API, it's something you use to write user-facing constant exporting
+APIs.
+
+There's dozens of similar constant defining modules and exporters on
+the CPAN, why did I need to write this one?
+
+=head2 It's lazy
+
+Our constants fleshened via callbacks that are guaranteed to be called
+only once for the lifetime of the process (not once per importer or
+whatever), and we only call the callbacks lazily if someone actually
+requests that a constant of ours be defined.
+
+This makes it easy to have one file that runs in different
+environments and generates some subset of its constants with a module
+that you may not want to use, or may not be available in all your
+environments. You can just C<require> it in the callback that
+generates the constant that requires it.
+
+=head2 It makes it easier to manage creating constants that require other constants
+
+Maybe you have one constant indicating whether you're running in a dev
+environment, and a bunch of other constants that are defined
+differently if the dev environment constant is true.
+
+Now say you have several hundred constants like that, managing the
+inter-dependencies and that everything is defined in the right order
+quickly gets messy.
+
+Constant::Import::Lazy takes away all this complexity. When you define
+a constant you get a callback object that can give you the value of
+other constants, and will either generate them if they haven't been
+generated, or look them up in the symbol table if they have.
+
+Thus we end up with a Makefile-like system where you can freely use
+whatever other constants you like when defining your constants, just
+be careful not to introduce circular dependencies.
+
+=head1 API
+
+Our API is exposed via a nested key-value pair list passed to C<use>,
+see the L</SYNOPSIS> for an example. Here's description of the data
+structure you can pass in:
+
+=head2 constants
+
+This is a key-value pair list of constant names to either a subroutine
+or a hash with L</call> and optional L<options|/options
+(local)>. Internally we just convert the former type of call into the
+latter, i.e. C<CONST => sub {...}> becomes C<CONST => { call => sub {
+... } }>.
+
+=head3 call
+
+The subroutine we'll call with a L</context object|/CONTEXT OBJECT> to
+fleshen the constant. It's guaranteed that this sub will only ever be
+called once for the lifetime of the process, except if you manually
+call it multiple times during an L</override>.
+
+=head3 options (local)
+
+Our options hash to override the global L</options>. The semantics are
+exactly the same as for the global hash.
+
+=head2 options
+
+We support various options, most of these can be defined either
+globally if you want to use them for all the constants, or locally to
+one constant at a time with the more verbose hash invocation to
+L</constants>.
+
+The following options are supported:
+
+=head3 wrap_existing_import
+
+A boolean that can only be supplied as a global option. If you provide
+this the package you're importing us into has to already have a
+defined C<import> subroutine.
+
+We'll clobber it with something that uses us to export all the
+constants we know about (i.e. the ones passed to L</constants>), but
+anything we don't know about will be passed to the C<import>
+subroutine we clobbered.
+
+This is handy for converting existing packages that use e.g. a
+combination of L<Exporter> to export a bunch of L<constant> constants
+without having to port them all over to C<Constant::Export::Lazy> at
+the same time. This allows you to do so incrementally.
+
+=head3 override
+
+This callback can be defined either globally or locally and will be
+called instead of your C<call>. In addition to the L</context
+object|/CONTEXT OBJECT> this will also get an argument to the C<$name>
+of the constant that we're requesting an override for.
+
+This can be used for things like overriding default values based on
+entries in C<%ENV> (see the L</SYNOPSIS>), or anything else you can
+think of.
+
+In an override subroutine C<return $value> will return a value to be
+used instead of the value we'd have retrieved from L</call>, doing a
+C<return;> on the other hand means you don't want to use the
+subroutine to override this constant, and we'll stop trying to do so
+and just call L/<call> to fleshen it.
+
+You can also get the value of L</call> by doing
+C<<$ctx->call($name)>>. We have some magic around override ensuring
+that we only B<get> the value, we don't actually intern it in the
+symbol table.
+
+This means that calling C<<$ctx->call($name)>> multiple times in the
+scope of an override subroutine is the only way to get
+C<Constant::Export::Lazy> to call a L/<call> subroutine multiple
+times. We otherwise guarantee that these subs are only called once (as
+discussed in L</It's lazy> and L</call>).
+
+=head3 after
+
+This callback will be called after we've just interned a new constant
+into the symbol table. In addition to the L</context object|/CONTEXT
+OBJECT> this will also get C<$name>, C<$value> and C<$source>
+arguments. The C<$name> argument is the name of the constant we just
+defined, C<$value> is its value, and C<$source> is either
+C<"override"> or C<"callback"> depending on how the constant was
+defined. I.e. via L</override> or directly via L</call>.
+
+This was added to support replacing modules that in addition to just
+defining constants might also want to check them for well-formedness
+after they're defined, or push known constants to a hash somewhere so
+they can all be retrieved by some complimentary API that e.g. spews
+out "all known settings".
+
+=head3 stash
+
+This is a reference that you can provide for your own use, we don't
+care what's in it. It'll be accessible via the L</context
+object|/CONTEXT OBJECT>'s C<stash> method (e.g. C<<my $stash =
+$ctx->stash> for L</call>, C</override> and C</after> calls relevant
+to its scope, i.e. global if you define it globally, otherwise local
+if it's defined locally.
+
+=head1 CONTEXT OBJECT
+
+As discussed above we pass around a context object to all callbacks
+that you can define. See C<$ctx> in the L</SYNOPSIS> for examples.
+
+This objects has only two methods:
 
 =over
 
-=item *
+=item * C<call>
 
-We're using C<$ctx->call($name)> to get the value of other constants
-while defining ours.
+This method will do all the work of fleshening constants via the sub
+provided in the L</call> option, taking the L</override> callback into
+account if provided, and if applicable calling the L</after> callback
+after the constant is defined.
 
-=item *
+If you call a subroutine you haven't defined yet (or isn't being
+imported directly) we'll fleshen it if needed, making sure to only
+export it to a user's namespace if explicitly requested.
 
-That you can use either a global C<override> option or a local per-sub
-one to override your constants via C<%ENV> variables, or anything else
-you can think of.
+See L</override> for caveats with calling this inside the scope of an
+override callback.
 
-=item *
+=item * C<stash>
 
-We're using the global C<wrap_existing_import> option, and L<Exporter>
-to export some of our constants via L<constant>.
-
-This demonstrates migrating an existing module that takes a list of
-constants (or labels) that don't overlap with our list of constants to
-C<Constant::Export::Lazy>.
-
-As well as supplying this option you have to C<use
-Constant::Export::Lazy> after the other module defines its C<import>
-subroutine. Then we basically compose a list of constants we know we
-can handle, and dispatch anything we don't know about to the C<import>
-subroutine we clobbered.
+An accessor for the L</stash> reference, will return the empty list if
+there's no stash reference defined.
 
 =back
 
