@@ -172,10 +172,13 @@ sub call {
     if (exists $symtab->{$gimme}) {
         my $symtab_value = $symtab->{$gimme};
         if (ref $symtab_value eq 'SCALAR') {
-            # For constant.pm constants
+            # This is in case $ctx->call() is used on a constant
+            # defined by constant.pm. See the giant comment about
+            # constant.pm below.
             $value = $$symtab_value;
         } else {
-            # TODO: Better way to check if this is a code value?
+            # TODO: Is there some better way to check if this is a
+            # code value than just "ne 'SCALAR'"?
             $value = &$symtab_value();
         }
     } else {
@@ -215,13 +218,63 @@ sub call {
             $value = $constants->{$gimme}->{call}->($ctx);
         }
 
-        # TODO: There's a new way to do this as of 5.9.x, see
-        # the source for constant.pm and the tricks it
-        # does. Possibly we want to use that. But this works
-        # on older versions too.
         unless (exists $GETTING_VALUE_FOR_OVERRIDE->{$gimme}) {
-            no strict 'refs';
-            *$glob_name = sub () { $value };
+            # Instead of doing `sub () { $value }` we could also
+            # use the following trick that constant.pm uses if
+            # it's true that `$] > 5.009002`:
+            #
+            #     Internals::SvREADONLY($value, 1);
+            #     $symtab->{$gimme} = \$value;
+            #
+            # This would save some space for perl when producing
+            # these inline constants. The reason I'm not doing
+            # this is basically because it looks like evil
+            # sorcery, and I don't want to go through the hassle
+            # of efficiently and portibly invalidating the MRO
+            # cache (see $flush_mro in constant.pm).
+            #
+            # Relevant commits in perl.git:
+            #
+            #  * perl-5.005_02-225-g779c5bc - first core support
+            #    for these kinds of constants in the optree.
+            #
+            # * perl-5.8.0-6623-ge040ff7 - first use in
+            #   constant.pm.
+            #
+            # * perl-5.8.0-6638-ge1234d8 - first attempts to
+            #   invalidate the method cache with
+            #   Internals::inc_sub_generation()
+            #
+            # * perl-5.8.0-10189-ge1a479c -
+            #   Internals::inc_sub_generation() in constant.pm
+            #   replaced with mro::method_changed_in($pkg)
+            #
+            #  * perl-5.8.0-10219-g41892db - Now unused
+            #    Internals::inc_sub_generation() removed from the
+            #    core.
+            #
+            # * v5.10.0-3508-gf7fd265 (and v5.10.0-3523-g81a8de7)
+            #   - MRO cache is changed to be flushed after all
+            #   constants are defined.
+            #
+            # * v5.19.2-130-g94d5c17, v5.19.2-132-g6f1b3ab,
+            #   v5.19.2-133-g15635cb, v5.19.2-134-gf815dc1 -
+            #   Father Chrysostomos making various list constant
+            #   changes, backed out in v5.19.2-204-gf99a5f0 due to
+            #   perl #119045:
+            #   https://rt.perl.org/rt3/Public/Bug/Display.html?id=119045
+            #
+            # So basically it looks like a huge can of worms that
+            # I don't want to touch now. So just create constants
+            # in the more portable and idiot-proof way instead so
+            # I don't have to duplicate all the logic in
+            # constant.pm
+            {
+                # Make the disabling of strict have as small as scope
+                # as possible.
+                no strict 'refs';
+                *$glob_name = sub () { use strict; $value };
+            }
 
             # Maybe we have a callback that wants to know when we define
             # our constants, e.g. for printing something out, keeping taps

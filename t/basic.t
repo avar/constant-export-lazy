@@ -14,6 +14,11 @@ BEGIN {
 }
 use Constant::Export::Lazy (
     constants => {
+        TEST_CONSTANT_USE_CONSTANT_PM => sub {
+            $CALL_COUNTER++;
+            my ($ctx) = @_;
+            $ctx->call('CONST_OLD_1') + $ctx->call('CONST_OLD_2');
+        },
         TEST_CONSTANT_CONST => sub {
             $CALL_COUNTER++;
             1;
@@ -155,6 +160,7 @@ BEGIN {
     TestSimple->import(qw(
         CONST_OLD_1
         CONST_OLD_2
+        TEST_CONSTANT_USE_CONSTANT_PM
         TEST_CONSTANT_CONST
         TEST_CONSTANT_VARIABLE
         TEST_CONSTANT_RECURSIVE
@@ -168,6 +174,7 @@ BEGIN {
 
 is(CONST_OLD_1, 123, "We got a constant from the Exporter::import");
 is(CONST_OLD_2, 456, "We got a constant from the Exporter::import");
+is(TEST_CONSTANT_USE_CONSTANT_PM, 123 + 456, "We can use ->call() on Exporter::import constants");
 is(TEST_CONSTANT_CONST, 1, "Simple constant sub");
 is(TEST_CONSTANT_VARIABLE, 6, "Constant composed with some variables");
 is(TEST_CONSTANT_RECURSIVE, 7, "Constant looked up via \$ctx->call(...)");
@@ -180,7 +187,7 @@ is(join(",", @{TEST_LIST()}), '3,4');
 like(TEST_NO_STASH, qr/PANIC: You've called \$ctx->stash with no stash defined!/, "Error on invalid stash usage");
 
 # Afterwards check that the counters are OK
-our $call_counter = 10;
+our $call_counter = 11;
 is($TestSimple::CALL_COUNTER, $call_counter, "We didn't redundantly call various subs, we cache them in the stash");
 is($TestSimple::AFTER_COUNTER, $TestSimple::CALL_COUNTER, "Our AFTER counter is always the same as our CALL counter, we only call this for interned values");
 is(TEST_AFTER_OVERRIDE, 123456, "We have TEST_AFTER_OVERRIDE defined");
