@@ -37,7 +37,7 @@ sub import {
     my $constants = $normalized_args->{constants};
 
     no strict 'refs';
-    no warnings 'redefine';
+    no warnings 'redefine'; # In case of $wrap_existing_import
     *{$caller_import_name} = sub {
         use strict;
         use warnings;
