@@ -2,6 +2,8 @@ Revision history for Constant::Export::Lazy
 
 {{$NEXT}}
 
+0.02 2013-09-15 15:28:10
+
     - Huge release with lots of new features and bugfixes.
 
     - Added an 'after' callback.
