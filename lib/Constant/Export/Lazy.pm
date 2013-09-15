@@ -306,9 +306,7 @@ sub stash {
     #
     #    if (defined(my $stash = $ctx->stash)) { ... }
     #
-    return unless exists $ctx->{stash};
-
-    $ctx->{stash};
+    return $ctx->{stash};
 }
 
 1;
