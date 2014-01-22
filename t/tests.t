@@ -176,7 +176,7 @@ BEGIN {
         TEST_LIST
         TEST_NO_STASH
         TEST_NO_AFTER_NO_OVERRIDE
-    ))
+    ));
 }
 
 is(CONST_OLD_1, 123, "We got a constant from the Exporter::import");
