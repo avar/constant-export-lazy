@@ -19,7 +19,7 @@ sub import {
 
     # Sanity check whether we do or don't have an existing 'import'
     # sub with the wrap_existing_import option:
-    my $has_import_already = do { no strict 'refs'; *{$caller_import_name}{CODE} } ? 1 : 0;
+    my $has_import_already = do { no strict 'refs'; no warnings 'once'; *{$caller_import_name}{CODE} } ? 1 : 0;
     {
         if ($wrap_existing_import) {
             die "PANIC: We need an existing 'import' with the wrap_existing_import option" unless $has_import_already;

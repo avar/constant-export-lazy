@@ -284,6 +284,24 @@ use Constant::Export::Lazy (
     },
 );
 
+package TestSimple::InvalidWrapExistingImport;
+use strict;
+use warnings;
+
+BEGIN {
+    eval {
+        Constant::Export::Lazy->import(
+            constants => {},
+            options => {
+                wrap_existing_import => 1,
+            },
+        );
+        1;
+    } or do {
+        $main::InvalidWrapExistingImport_error = $@;
+    };
+}
+
 package main;
 use strict;
 use warnings;
@@ -351,6 +369,7 @@ is($TestSimple::OVERRIDE_COUNTER, $after_and_override_call_counter, "We correctl
 # coverage.
 is(TEST_CONSTANT_NO_OPTIONS, "no options", "A Constant::Export::Lazy with no options => {}");
 like(TEST_BAD_CALL_PARAMETER_NO_WRAP_EXISTING_IMPORT, qr/^PANIC.*unknown constant/, "A Constant::Export::Lazy with no wrap_existing_import with invalid ->call()");
+like($main::InvalidWrapExistingImport_error, qr/^PANIC.*We need an existing 'import' with the wrap_existing_import/, "wrap_existing_import assertion");
 
 package main::frame;
 use strict;
