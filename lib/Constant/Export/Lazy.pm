@@ -25,7 +25,7 @@ sub import {
             die "PANIC: We need an existing 'import' with the wrap_existing_import option" unless $has_import_already;
             $existing_import = \&{$caller_import_name};
         } else {
-            die "PANIC: We're trying to clobber some existing 'import' subroutine without having the 'wrap_existing_import' option" if $has_import_already;
+            die "PANIC: We're trying to clobber an existing 'import' subroutine without having the 'wrap_existing_import' option" if $has_import_already;
         }
     }
 

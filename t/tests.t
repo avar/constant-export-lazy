@@ -302,6 +302,23 @@ BEGIN {
     };
 }
 
+package TestSimple::ClobberingWithoutWrapExistingImport;
+use strict;
+use warnings;
+
+sub import {}
+
+BEGIN {
+    eval {
+        Constant::Export::Lazy->import(
+            constants => {},
+        );
+        1;
+    } or do {
+        $main::ClobberingWithoutWrapExistingImport_error = $@;
+    };
+}
+
 package main;
 use strict;
 use warnings;
@@ -370,6 +387,7 @@ is($TestSimple::OVERRIDE_COUNTER, $after_and_override_call_counter, "We correctl
 is(TEST_CONSTANT_NO_OPTIONS, "no options", "A Constant::Export::Lazy with no options => {}");
 like(TEST_BAD_CALL_PARAMETER_NO_WRAP_EXISTING_IMPORT, qr/^PANIC.*unknown constant/, "A Constant::Export::Lazy with no wrap_existing_import with invalid ->call()");
 like($main::InvalidWrapExistingImport_error, qr/^PANIC.*We need an existing 'import' with the wrap_existing_import/, "wrap_existing_import assertion");
+like($main::ClobberingWithoutWrapExistingImport_error, qr/^PANIC:.*trying to clobber an existing 'import' subroutine/, "Clobbering import without wrap_existing_import");
 
 package main::frame;
 use strict;
