@@ -4,6 +4,10 @@ Revision history for Constant::Export::Lazy
 
     - This is a major release
 
+    - Add support for a buildargs callback. This can be used to add
+      support for export tags, or to map the parameters to import() in
+      any other way you can think of.
+
     - A new private_name_munger option is now available both globally
       and locally per-constant. This can be used to obscure the
       internal names of generated constants, to avoid hard to track

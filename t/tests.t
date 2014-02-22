@@ -283,6 +283,39 @@ use strict;
 use warnings;
 BEGIN { our @ISA = qw(TestSimple) }
 
+package TestSimple::Buildargs;
+use strict;
+use warnings;
+
+use Constant::Export::Lazy (
+    constants => {
+        map({ my $tmp = $_; +("CONSTANT_$_" => sub { $tmp } ) } "A".."Z")
+    },
+    options => {
+        buildargs => sub {
+            my ($import_args, $constants) = @_;
+
+            # We look to be importing literal subroutines, skip the rest
+            return if $import_args->[0] eq 'CONSTANT_A';
+
+            # This'll die
+            return (1, 2) if $import_args->[0] eq ":return_too_many";
+
+            my @import_args = map {
+                (
+                    $_ eq ':late_alphabet'
+                    ? (map { "CONSTANT_$_" } "N".."Z")
+                    : (die "PANIC: $_")
+                )
+            } grep {
+                $_ ne ':garbage'
+            } @$import_args;
+
+            return \@import_args;
+        },
+    },
+);
+
 package TestSimple::NoOptions;
 use strict;
 use warnings;
@@ -453,6 +486,32 @@ BEGIN {
     TestSimple::NoWrapExistingImport->import(qw(
         TEST_BAD_CALL_PARAMETER_NO_WRAP_EXISTING_IMPORT
     ));
+    TestSimple::Buildargs->import(qw(
+        CONSTANT_A
+        CONSTANT_B
+        CONSTANT_C
+        CONSTANT_D
+        CONSTANT_E
+        CONSTANT_F
+        CONSTANT_G
+        CONSTANT_H
+        CONSTANT_I
+        CONSTANT_J
+        CONSTANT_K
+        CONSTANT_L
+        CONSTANT_M
+    ));
+    TestSimple::Buildargs->import(qw(
+        :late_alphabet
+        :garbage
+    ));
+    eval {
+        TestSimple::Buildargs->import(qw(:return_too_many));
+        1;
+    } or do {
+        my $error = $@ || "Zombie Error";
+        like($error, qr/^PANIC.*return zero or one values with buildargs, yours returns 2 values/, "Invalid buildargs use");
+    };
 }
 
 is(CONST_OLD_1, 123, "We got a constant from the Exporter::import");
@@ -492,6 +551,9 @@ like($main::InvalidWrapExistingImport_error, qr/^PANIC.*We need an existing 'imp
 like($main::ClobberingWithoutWrapExistingImport_error, qr/^PANIC:.*trying to clobber an existing 'import' subroutine/, "Clobbering import without wrap_existing_import");
 like($main::InvalidConstant_error, qr/^PANIC.*has some value type we don't know about.*ref = ARRAY/, "Calling import with invalid constants");
 like($main::InvalidConstantMoarTestCoverage_error, qr/^PANIC.*has some value type we don't know about.*ref = Undef/, "Calling import with invalid constants (Undef)");
+
+# Tests for the buildargs functionality
+is(do { no strict 'refs'; &{"CONSTANT_$_"} }, $_, "The buildargs-imported CONSTANT_$_ sub returns $_") for "A".."Z";
 
 package main::frame;
 use strict;

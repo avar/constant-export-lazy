@@ -36,6 +36,16 @@ sub import {
     my $normalized_args = _normalize_arguments(%args);
     my $constants = $normalized_args->{constants};
 
+    # This is a callback that can be used to munge the import list, to
+    # e.g. provide a facility to provide import tags.
+    my $buildargs = (
+        exists $args{options}
+        ? exists $args{options}->{buildargs}
+          ? $args{options}->{buildargs}
+          : undef
+        : undef
+    );
+
     no strict 'refs';
     no warnings 'redefine'; # In case of $wrap_existing_import
     *{$caller_import_name} = sub {
@@ -86,6 +96,17 @@ sub import {
             # the constants in the package to our liking.
             wrap_existing_import => $wrap_existing_import,
         );
+
+        # We've been provided with a callback to be used to munge
+        # whatever we actually got provided with in @gimme to a list
+        # of constants, or if $wrap_existing_import is enabled any
+        # leftover non-$gimme names it's going to handle.
+        if ($buildargs) {
+            my @overriden_gimme = $buildargs->(\@gimme, $constants);
+            die "PANIC: We only support subs that return zero or one values with buildargs, yours returns " . @overriden_gimme . " values"
+                if @overriden_gimme > 1;
+            @gimme = @{$overriden_gimme[0]} if @overriden_gimme;
+        }
 
         # Just doing ->call() like you would when you're using the API
         # will fleshen the constant, do this for all the constants
@@ -368,9 +389,9 @@ Constant::Export::Lazy - Utility to write lazy exporters of constant subroutines
 
 =head1 SYNOPSIS
 
-This increasingly verbose example of your C<My::Constants> package
-that you write using C<Constant::Export::Lazy> demonstrates all our
-features (from F<t/lib/My/Constants.pm> in the source distro):
+These increasing verbose example of a C<My::Constants> package that
+you can write using C<Constant::Export::Lazy> demonstrates most of our
+major features (from F<t/lib/My/Constants.pm> in the source distro):
 
     package My::Constants;
     use strict;
@@ -521,6 +542,106 @@ And running it gives:
     ok 8
     1..8
 
+By default we only support importing constants explicitly by their own
+names and not something like L<Exporter>'s C<@EXPORT>, C<@EXPORT_OK>
+or C<%EXPORT_TAGS>, but you can trivially add support for that (or any
+other custom import munging) using the L</buildargs> callback. This
+example is from F<t/lib/My/Constants/Tags.pm> in the source distro:
+
+    package My::Constants::Tags;
+    use v5.10;
+    use strict;
+    use warnings;
+    use Constant::Export::Lazy (
+        constants => {
+            KG_TO_MG => sub { 10**6 },
+            SQRT_2 => {
+                call    => sub { sqrt(2) },
+                options => {
+                    stash => {
+                        export_tags => [ qw/:math/ ],
+                    },
+                },
+            },
+            PI => {
+                call    => sub { atan2(1,1) * 4 },
+                options => {
+                    stash => {
+                        export_tags => [ qw/:math/ ],
+                    },
+                },
+            },
+            map(
+                {
+                    my $t = $_;
+                    +(
+                        $_ => {
+                            call => sub { $t },
+                            options => {
+                                stash => {
+                                    export_tags => [ qw/:alphabet/ ],
+                                },
+                            }
+                        }
+                    )
+                }
+                "A".."Z"
+            ),
+        },
+        options => {
+            buildargs => sub {
+                my ($import_args, $constants) = @_;
+
+                state $export_tags = do {
+                    my %export_tags;
+                    for my $constant (keys %$constants) {
+                        my @export_tags = @{$constants->{$constant}->{options}->{stash}->{export_tags} || []};
+                        push @{$export_tags{$_}} => $constant for @export_tags;
+                    }
+                    \%export_tags;
+                };
+
+                my @gimme = map {
+                    /^:/ ? @{$export_tags->{$_}} : $_
+                } @$import_args;
+
+                return \@gimme;
+            },
+        },
+    );
+
+    1;
+
+And this is an example of using it in some user code (from
+F<t/synopsis_tags.t> in the source distro):
+
+    package My::More::User::Code;
+    use strict;
+    use warnings;
+    use Test::More qw(no_plan);
+    use lib 't/lib';
+    use My::Constants::Tags qw(
+        KG_TO_MG
+        :math
+        :alphabet
+    );
+
+    is(KG_TO_MG, 10**6);
+    is(A, "A");
+    is(B, "B");
+    is(C, "C");
+    like(PI, qr/^3\.14/);
+
+And running it gives:
+
+    $ perl -Ilib t/synopsis_tags.t
+    ok 1
+    ok 2
+    ok 3
+    ok 4
+    ok 5
+    1..5
+
 =head1 DESCRIPTION
 
 This is a utility to write lazy exporters of constant
@@ -610,6 +731,29 @@ one constant at a time with the more verbose hash invocation to
 L</constants>.
 
 The following options are supported:
+
+=head3 buildargs
+
+A callback that can only be supplied as a global option. If you
+provide this the callback we'll call it to munge any parameters to
+import we might get. This can be used (as shown in the
+L<synopsis|/SYNOPSIS>) to strip or map parameters to e.g. implement
+support for C<%EXPORT_TAGS>, or to do any other arbitrary mapping.
+
+This callback will be called with a reference to the parameters passed
+to import, and for convenience with the L<constants|/constants> with
+the hash you provided (e.g. for introspecting the stashes of
+constants, see the L<synopsis|/SYNOPSIS> example.
+
+This is expected to return an array with a list of constants to
+import, or the empty list if we should discard the return value of
+this callback and act is if it wasn't present at all.
+
+This plays nice with the L</wrap_existing_import> parameter. When it's
+in force any constant names (or tag names, or whatever) you return
+that we don't know about ourselves we'll pass to the fallback import
+subroutine we're wrapping as we would if buildargs hadn't been
+defined.
 
 =head3 wrap_existing_import
 
