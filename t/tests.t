@@ -251,6 +251,39 @@ use strict;
 use warnings;
 BEGIN { our @ISA = qw(TestSimple) }
 
+package TestSimple::NoOptions;
+use strict;
+use warnings;
+
+use Constant::Export::Lazy (
+    constants => {
+        TEST_CONSTANT_NO_OPTIONS => sub { "no options" }
+    },
+);
+
+package TestSimple::NoWrapExistingImport;
+use strict;
+use warnings;
+
+use Constant::Export::Lazy (
+    constants => {
+        TEST_BAD_CALL_PARAMETER_NO_WRAP_EXISTING_IMPORT => sub {
+            my ($ctx) = @_;
+            my $error = '';
+            eval {
+                $ctx->call('THIS_CONSTANT_DOES_NOT_EXIST');
+                1;
+            } or do {
+                $error = $@;
+            };
+            return $error;
+        },
+    },
+    options => {
+        # Just an empty hash to provide more coverage
+    },
+);
+
 package main;
 use strict;
 use warnings;
@@ -277,6 +310,12 @@ BEGIN {
         TEST_NO_STASH
         TEST_NO_AFTER_NO_OVERRIDE
         TEST_BAD_CALL_PARAMETER
+    ));
+    TestSimple::NoOptions->import(qw(
+        TEST_CONSTANT_NO_OPTIONS
+    ));
+    TestSimple::NoWrapExistingImport->import(qw(
+        TEST_BAD_CALL_PARAMETER_NO_WRAP_EXISTING_IMPORT
     ));
 }
 
@@ -307,6 +346,11 @@ is($TestSimple::AFTER_COUNTER, $after_and_override_call_counter, "Our AFTER coun
 is(TEST_AFTER_OVERRIDE, 123456, "We have TEST_AFTER_OVERRIDE defined");
 is($TestSimple::AFTER_OVERRIDE_COUNTER, 1, "We correctly call 'after', except when they've been clobbered");
 is($TestSimple::OVERRIDE_COUNTER, $after_and_override_call_counter, "We correctly call overrides, except when they've been clobbered");
+
+# Other tests of custom Constant::Export::Lazy pacakges for added
+# coverage.
+is(TEST_CONSTANT_NO_OPTIONS, "no options", "A Constant::Export::Lazy with no options => {}");
+like(TEST_BAD_CALL_PARAMETER_NO_WRAP_EXISTING_IMPORT, qr/^PANIC.*unknown constant/, "A Constant::Export::Lazy with no wrap_existing_import with invalid ->call()");
 
 package main::frame;
 use strict;
