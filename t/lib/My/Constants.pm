@@ -35,10 +35,8 @@ use Constant::Export::Lazy (
         # thus We'll return [3..4] here.
         #
         # Unlike the constant.pm that ships with perl itself we don't
-        # support returning lists (there's no such things as constant
-        # list subroutines, constant.pm fakes it with a non-inlined
-        # sub). So if you want to return lists you have to return a
-        # reference to one.
+        # support returning lists. So if you want to return lists you
+        # have to return a reference to one.
         LIST => sub { wantarray ? (1..2) : [3..4] },
         # We can also supply a HashRef with "call" with the sub, and
         # "options" with options that clobber the global
