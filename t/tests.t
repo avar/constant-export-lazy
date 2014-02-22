@@ -9,7 +9,16 @@ use Exporter 'import';
 use constant {
     CONST_OLD_1 => 123,
     CONST_OLD_2 => 456,
+    CONST_OLD_3 => [123, 456],
+    CONST_OLD_4 => {int => 789},
 };
+use constant CONST_OLD_5 => (123, 456, 789);
+sub CONST_OLD_6 () { 123 }
+sub CONST_OLD_7 () { 456 }
+sub CONST_OLD_8 () { [123, 456] }
+sub CONST_OLD_9 () { +{int => 789} }
+sub CONST_OLD_10 () { [123, 456, 789] }
+sub CONST_OLD_10_bad () { +(123, 456, 789) }
 BEGIN {
     our @EXPORT_OK = qw(CONST_OLD_1 CONST_OLD_2);
 }
@@ -18,7 +27,53 @@ use Constant::Export::Lazy (
         TEST_CONSTANT_USE_CONSTANT_PM => sub {
             $CALL_COUNTER++;
             my ($ctx) = @_;
-            $ctx->call('CONST_OLD_1') + $ctx->call('CONST_OLD_2');
+            my $refs_sum = (
+                $ctx->call('CONST_OLD_1')
+                +
+                $ctx->call('CONST_OLD_2')
+                +
+                $ctx->call('CONST_OLD_3')->[0]
+                +
+                $ctx->call('CONST_OLD_3')->[1]
+                +
+                $ctx->call('CONST_OLD_4')->{int}
+            );
+            my $list_sum;
+            $list_sum += $_ for @{$ctx->call('CONST_OLD_5')};
+            return $refs_sum + $list_sum;
+        },
+        TEST_CONSTANT_MANUAL_CONSTANT => sub {
+            $CALL_COUNTER++;
+            my ($ctx) = @_;
+            my $refs_sum = (
+                $ctx->call('CONST_OLD_6')
+                +
+                $ctx->call('CONST_OLD_7')
+                +
+                $ctx->call('CONST_OLD_8')->[0]
+                +
+                $ctx->call('CONST_OLD_8')->[1]
+                +
+                $ctx->call('CONST_OLD_9')->{int}
+            );
+            my $list_sum;
+            # Unlike CONST_OLD_5 this isn't some magical ArrayRef in
+            # the symbol table, it's just a list, so we'll get the
+            # last item.
+            $list_sum += $_ for @{$ctx->call('CONST_OLD_10')};
+            return $refs_sum + $list_sum;
+        },
+        CONST_OLD_10_BAD_WRAPPER => sub {
+            $CALL_COUNTER++;
+            my ($ctx) = @_;
+            my $error = '';
+            eval {
+                $ctx->call('CONST_OLD_10_bad');
+                1;
+            } or do {
+                $error = $@;
+            };
+            return $error;
         },
         TEST_CONSTANT_CONST => sub {
             $CALL_COUNTER++;
@@ -74,6 +129,31 @@ use Constant::Export::Lazy (
                 1;
             },
         },
+        TEST_CONSTANT_CALLED_FROM_OVERRIDDEN_ENV_NAME_NAME_MUNGED => {
+            # We should not only call but also intern this constant.
+            options => {
+                after => sub {
+                    $AFTER_COUNTER++;
+                    return;
+                },
+                override => sub {
+                    $OVERRIDE_COUNTER++;
+                    my ($ctx, $name) = @_;
+                    # We should still call overrides for things that
+                    # are called from *other* stuff that's being
+                    # overriden.
+                    return 1 + $ctx->call($name);
+                },
+                private_name_munger => sub {
+                    my ($gimme) = @_;
+                    return '__INTERNAL__' . $gimme;
+                },
+            },
+            call => sub {
+                $CALL_COUNTER++;
+                1;
+            },
+        },
         TEST_CONSTANT_OVERRIDDEN_ENV_NAME => {
             options => {
                 override => sub {
@@ -81,7 +161,13 @@ use Constant::Export::Lazy (
                     my ($ctx, $name) = @_;
 
                     if (exists $ENV{OVERRIDDEN_ENV_NAME}) {
-                        my $value = $ctx->call($name) + $ctx->call('TEST_CONSTANT_CALLED_FROM_OVERRIDDEN_ENV_NAME');
+                        my $value = (
+                            $ctx->call($name)
+                            +
+                            $ctx->call('TEST_CONSTANT_CALLED_FROM_OVERRIDDEN_ENV_NAME')
+                            +
+                            $ctx->call('TEST_CONSTANT_CALLED_FROM_OVERRIDDEN_ENV_NAME_NAME_MUNGED')
+                        );
                         return $ENV{OVERRIDDEN_ENV_NAME} + $value;
                     }
                     return;
@@ -89,7 +175,7 @@ use Constant::Export::Lazy (
             },
             call => sub {
                 $CALL_COUNTER++;
-                39;
+                37;
             },
         },
         TEST_AFTER_OVERRIDE => {
@@ -125,6 +211,18 @@ use Constant::Export::Lazy (
                 after => undef,
                 override => undef,
             },
+        },
+        TEST_BAD_CALL_PARAMETER => sub {
+            $CALL_COUNTER++;
+            my ($ctx) = @_;
+            my $error = '';
+            eval {
+                $ctx->call('THIS_CONSTANT_DOES_NOT_EXIST');
+                1;
+            } or do {
+                $error = $@;
+            };
+            return $error;
         },
     },
     options => {
@@ -167,6 +265,8 @@ BEGIN {
         CONST_OLD_1
         CONST_OLD_2
         TEST_CONSTANT_USE_CONSTANT_PM
+        TEST_CONSTANT_MANUAL_CONSTANT
+        CONST_OLD_10_BAD_WRAPPER
         TEST_CONSTANT_CONST
         TEST_CONSTANT_VARIABLE
         TEST_CONSTANT_RECURSIVE
@@ -176,26 +276,31 @@ BEGIN {
         TEST_LIST
         TEST_NO_STASH
         TEST_NO_AFTER_NO_OVERRIDE
+        TEST_BAD_CALL_PARAMETER
     ));
 }
 
 is(CONST_OLD_1, 123, "We got a constant from the Exporter::import");
 is(CONST_OLD_2, 456, "We got a constant from the Exporter::import");
-is(TEST_CONSTANT_USE_CONSTANT_PM, 123 + 456, "We can use ->call() on Exporter::import constants");
+is(TEST_CONSTANT_USE_CONSTANT_PM, 123 + 456 + 123 + 456 + 789 + 123 + 456 + 789, "We can use ->call() on Exporter::import constant.pm constants");
+is(TEST_CONSTANT_MANUAL_CONSTANT, 123 + 456 + 123 + 456 + 789 + 123 + 456 + 789, "We can use ->call() on Exporter::import manual constants");
+like(CONST_OLD_10_BAD_WRAPPER, qr/^PANIC.*CONST_OLD_10_bad returns 3 values/, "We don't support non-scalar returning subs");
 is(TEST_CONSTANT_CONST, 1, "Simple constant sub");
 is(TEST_CONSTANT_VARIABLE, 6, "Constant composed with some variables");
 is(TEST_CONSTANT_RECURSIVE, 7, "Constant looked up via \$ctx->call(...)");
 is(TEST_CONSTANT_OVERRIDDEN_ENV_NAME, 42, "We properly defined a constant with some overriden options");
 ok(exists &TestSimple::TEST_CONSTANT_CALLED_FROM_OVERRIDDEN_ENV_NAME, "We fleshened unrelated TEST_CONSTANT_CALLED_FROM_OVERRIDDEN_ENV_NAME though");
+ok(exists &TestSimple::__INTERNAL__TEST_CONSTANT_CALLED_FROM_OVERRIDDEN_ENV_NAME_NAME_MUNGED, "..and its __INTERNAL__TEST_CONSTANT_CALLED_FROM_OVERRIDDEN_ENV_NAME_NAME_MUNGED sibling with an overridden name");
 is(TEST_CONSTANT_REQUESTED, 98765, "Our requested constant has the right value");
 ok(!exists &TEST_CONSTANT_NOT_REQUESTED, "We shouldn't import TEST_CONSTANT_NOT_REQUESTED into this namespace...");
 is(TestSimple::TEST_CONSTANT_NOT_REQUESTED, 98765, "...but it should be defined in TestSimple::* so it'll be re-used as well");
 is(join(",", @{TEST_LIST()}), '3,4');
 is(TEST_NO_STASH, undef, "We'll return undef if we have no stash");
 is(TEST_NO_AFTER_NO_OVERRIDE, 'no_after_no_override', "A constant that didn't call 'after' or 'override'");
+like(TEST_BAD_CALL_PARAMETER, qr/^PANIC.*THIS_CONSTANT_DOES_NOT_EXIST has no symbol table entry/, "Non-existing constant under wrap_existing_import");
 
 # Afterwards check that the counters are OK
-our $call_counter = 12;
+our $call_counter = 16;
 our $after_and_override_call_counter = $call_counter - 1;
 is($TestSimple::CALL_COUNTER, $call_counter, "We didn't redundantly call various subs, we cache them in the stash");
 is($TestSimple::AFTER_COUNTER, $after_and_override_call_counter, "Our AFTER counter is always the same as our CALL counter (unless 'after' is clobbered), we only call this for interned values");
