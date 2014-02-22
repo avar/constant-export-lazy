@@ -346,6 +346,22 @@ BEGIN {
         TEST_NO_AFTER_NO_OVERRIDE
         TEST_BAD_CALL_PARAMETER
     ));
+    for my $pkg (qw(TestSimple TestSimple::NoOptions)) {
+        eval {
+            $pkg->import('THIS_CONSTANT_DOES_NOT_EXIST');
+            1;
+        } or do {
+            my $error = $@ || "Zombie Error";
+            my $desc = "Calling import() with invalid constant";
+            if ($pkg eq 'TestSimple') {
+                like($error, qr/"THIS_CONSTANT_DOES_NOT_EXIST" is not exported by the $pkg module/, "$desc with wrap_existing_import");
+            } elsif ($pkg eq 'TestSimple::NoOptions') {
+                like($error, qr/PANIC: We don't have the constant 'THIS_CONSTANT_DOES_NOT_EXIST' to export to you/, "$desc without wrap_existing_import");
+            } else {
+                die "PANIC";
+            }
+        };
+    }
     TestSimple::NoOptions->import(qw(
         TEST_CONSTANT_NO_OPTIONS
     ));
