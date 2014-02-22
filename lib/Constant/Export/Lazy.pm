@@ -528,8 +528,8 @@ subroutines. It's not meant to be a user-facing constant exporting
 API, it's something you use to write user-facing constant exporting
 APIs.
 
-There's dozens of similar constant defining modules and exporters on
-the CPAN, why did I need to write this one?
+There's dozens of modules on the CPAN that define constants in one way
+or another, why did I need to write this one?
 
 =head2 It's lazy
 
@@ -538,11 +538,18 @@ only once for the lifetime of the process (not once per importer or
 whatever), and we only call the callbacks lazily if someone actually
 requests that a constant of ours be defined.
 
-This makes it easy to have one file that runs in different
-environments and generates some subset of its constants with a module
-that you may not want to use, or may not be available in all your
-environments. You can just C<require> it in the callback that
-generates the constant that requires it.
+This makes it easy to have one constant exporting module that runs in
+different environments, and generates some subset of its constants
+depending on what the program that's using it actually needs.
+
+Some data that you may want to turn into constants may require modules
+that aren't available everywhere, queries to databases that aren't
+available everywhere, or make certain assumptions about the
+environment they're running under that may not be true across all your
+environments.
+
+By only defining those constants you actually need via callbacks that
+you provide managing all these special-cases becomes a lot easier.
 
 =head2 It makes it easier to manage creating constants that require other constants
 
@@ -551,17 +558,20 @@ environment, and a bunch of other constants that are defined
 differently if the dev environment constant is true.
 
 Now say you have several hundred constants like that, managing the
-inter-dependencies and that everything is defined in the right order
-quickly gets messy.
+inter-dependencies and ensuring that they're all defined in the right
+order with dependencies before dependents quickly gets messy.
 
 Constant::Import::Lazy takes away all this complexity. When you define
 a constant you get a callback object that can give you the value of
-other constants, and will either generate them if they haven't been
-generated, or look them up in the symbol table if they have.
+other constants.
+
+When you look up another constant we'll either generate it if it
+hasn't been materialized yet, look it up in the symbol table if it
+has.
 
 Thus we end up with a Makefile-like system where you can freely use
-whatever other constants you like when defining your constants, just
-be careful not to introduce circular dependencies.
+whatever other constants you like when defining your constants, you
+only have to be careful not to introduce circular dependencies.
 
 =head1 API
 
@@ -581,9 +591,11 @@ latter, i.e. C<CONST => sub {...}> becomes C<CONST => { call => sub {
 
 The subroutine we'll call with a L<context
 object|Constant::Export::Lazy/"CONTEXT OBJECT"> to fleshen the
-constant. It's guaranteed that this sub will only ever be called once
-for the lifetime of the process, except if you manually call it
-multiple times during an L</override>.
+constant.
+
+It's guaranteed that this sub will only ever be called once for the
+lifetime of the process, except if you manually call it multiple times
+during an L</override>.
 
 =head3 options (local)
 

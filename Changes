@@ -18,6 +18,9 @@ Revision history for Constant::Export::Lazy
       coverage of this module is now 100%. A few minor bugs were fixed
       in the process of achieving this.
 
+    - Some minor documentation improvements, mainly rewording existing
+      sentences.
+
 0.03 2013-09-15 15:36:42
 
     - Fix trivial POD errors I didn't spot in the 0.02 release.
