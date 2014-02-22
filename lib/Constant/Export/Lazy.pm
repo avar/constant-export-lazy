@@ -11,8 +11,8 @@ sub import {
         exists $args{options}
         ? exists $args{options}->{wrap_existing_import}
           ? $args{options}->{wrap_existing_import}
-          : 0
-        : 0
+          : undef
+        : undef
     );
     my $existing_import;
     my $caller_import_name = $caller . '::import';
