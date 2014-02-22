@@ -289,7 +289,11 @@ use warnings;
 
 use Constant::Export::Lazy (
     constants => {
-        TEST_CONSTANT_NO_OPTIONS => sub { "no options" }
+        TEST_CONSTANT_NO_OPTIONS => sub {
+            my ($ctx) = @_;
+            "no " . $ctx->call('TEST_CONSTANT_OPTIONS');
+        },
+        TEST_CONSTANT_OPTIONS => sub { "options" },
     },
 );
 
@@ -444,6 +448,7 @@ BEGIN {
     }
     TestSimple::NoOptions->import(qw(
         TEST_CONSTANT_NO_OPTIONS
+        TEST_CONSTANT_OPTIONS
     ));
     TestSimple::NoWrapExistingImport->import(qw(
         TEST_BAD_CALL_PARAMETER_NO_WRAP_EXISTING_IMPORT
@@ -481,6 +486,7 @@ is($TestSimple::OVERRIDE_COUNTER, $after_and_override_call_counter + 1, "We corr
 # Other tests of custom Constant::Export::Lazy pacakges for added
 # coverage.
 is(TEST_CONSTANT_NO_OPTIONS, "no options", "A Constant::Export::Lazy with no options => {}");
+is(TEST_CONSTANT_OPTIONS, "options", "Testing re-fetched constant with no wrap_existing_import for coverage");
 like(TEST_BAD_CALL_PARAMETER_NO_WRAP_EXISTING_IMPORT, qr/^PANIC.*unknown constant/, "A Constant::Export::Lazy with no wrap_existing_import with invalid ->call()");
 like($main::InvalidWrapExistingImport_error, qr/^PANIC.*We need an existing 'import' with the wrap_existing_import/, "wrap_existing_import assertion");
 like($main::ClobberingWithoutWrapExistingImport_error, qr/^PANIC:.*trying to clobber an existing 'import' subroutine/, "Clobbering import without wrap_existing_import");
