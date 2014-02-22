@@ -2,6 +2,22 @@ Revision history for Constant::Export::Lazy
 
 {{$NEXT}}
 
+    - This is a major release
+
+    - A new private_name_munger option is now available both globally
+      and locally per-constant. This can be used to obscure the
+      internal names of generated constants, to avoid hard to track
+      down errors related to using lazy constants someone else might
+      define for you (and then suddenly stop doing so).
+
+    - When using the wrap_existing_import option the $ctx->call()
+      method wouldn't work with some constant.pm-generated
+      subroutines. This has now been exhaustively fixed.
+
+    - After a lot of playing around with test coverage the test
+      coverage of this module is now 100%. A few minor bugs were fixed
+      in the process of achieving this.
+
 0.03 2013-09-15 15:36:42
 
     - Fix trivial POD errors I didn't spot in the 0.02 release.
