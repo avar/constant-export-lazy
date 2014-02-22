@@ -210,6 +210,23 @@ use Constant::Export::Lazy (
                 $ctx->stash->{some_value};
             },
         },
+        TEST_BROKEN_AFTER_OVERRIDE => {
+            options => {
+                after => sub {
+                    $AFTER_COUNTER++;
+                    $AFTER_OVERRIDE_COUNTER++;
+                    return 1;
+                },
+                stash => {
+                    some_value => 123456,
+                },
+            },
+            call => sub {
+                my ($ctx) = @_;
+                $CALL_COUNTER++;
+                $ctx->stash->{some_value};
+            },
+        },
         TEST_NO_STASH => {
             call => sub {
                 my ($ctx) = @_;
@@ -402,6 +419,13 @@ BEGIN {
         my $error = $@ || "Zombie Error";
         like($error, qr/^PANIC: We should only get one value returned from the override callback/, "Testing broken override callback");
     };
+    eval {
+        TestSimple->import(qw(TEST_BROKEN_AFTER_OVERRIDE));
+        1;
+    } or do {
+        my $error = $@ || "Zombie Error";
+        like($error, qr/^PANIC: Don't return anything from 'after' routines/, "Testing broken after callback");
+    };
     for my $pkg (qw(TestSimple TestSimple::NoOptions)) {
         eval {
             $pkg->import('THIS_CONSTANT_DOES_NOT_EXIST');
@@ -446,12 +470,12 @@ is(TEST_NO_AFTER_NO_OVERRIDE, 'no_after_no_override', "A constant that didn't ca
 like(TEST_BAD_CALL_PARAMETER, qr/^PANIC.*THIS_CONSTANT_DOES_NOT_EXIST has no symbol table entry/, "Non-existing constant under wrap_existing_import");
 
 # Afterwards check that the counters are OK
-our $call_counter = 17;
+our $call_counter = 18;
 our $after_and_override_call_counter = $call_counter - 2;
 is($TestSimple::CALL_COUNTER, $call_counter, "We didn't redundantly call various subs, we cache them in the stash");
 is($TestSimple::AFTER_COUNTER, $after_and_override_call_counter, "Our AFTER counter is always the same as our CALL counter (unless 'after' is clobbered), we only call this for interned values");
 is(TEST_AFTER_OVERRIDE, 123456, "We have TEST_AFTER_OVERRIDE defined");
-is($TestSimple::AFTER_OVERRIDE_COUNTER, 1, "We correctly call 'after', except when they've been clobbered");
+is($TestSimple::AFTER_OVERRIDE_COUNTER, 2, "We correctly call 'after', except when they've been clobbered");
 is($TestSimple::OVERRIDE_COUNTER, $after_and_override_call_counter + 1, "We correctly call overrides, except when they've been clobbered");
 
 # Other tests of custom Constant::Export::Lazy pacakges for added
