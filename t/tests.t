@@ -12,7 +12,7 @@ use constant {
     CONST_OLD_3 => [123, 456],
     CONST_OLD_4 => {int => 789},
 };
-use constant CONST_OLD_5 => (123, 456, 789);
+use constant CONST_OLD_5 => [123, 456, 789];
 sub CONST_OLD_6 () { 123 }
 sub CONST_OLD_7 () { 456 }
 sub CONST_OLD_8 () { [123, 456] }
@@ -22,6 +22,7 @@ sub CONST_OLD_10_bad () { +(123, 456, 789) }
 BEGIN {
     our @EXPORT_OK = qw(CONST_OLD_1 CONST_OLD_2);
 }
+use constant PERL_BEHAVIOR_DIFFERENCE_CONSTANT_LIST => ("a", "b", "c");
 use Constant::Export::Lazy (
     constants => {
         TEST_CONSTANT_USE_CONSTANT_PM => sub {
@@ -256,6 +257,22 @@ use Constant::Export::Lazy (
             };
             return $error;
         },
+        TEST_WRAP_PERL_BEHAVIOR_DIFFERENCE_CONSTANT_LIST => sub {
+            $CALL_COUNTER++;
+            my ($ctx) = @_;
+
+            my @ret;
+            eval {
+                my $ret = $ctx->call('PERL_BEHAVIOR_DIFFERENCE_CONSTANT_LIST');
+                @ret = ('ok', $ret);
+                1;
+            } or do {
+                my $error = $@ || "Zombie Error";
+                @ret = ('error', $error);
+            };
+
+            return \@ret;
+        },
     },
     options => {
         wrap_existing_import => 1,
@@ -448,6 +465,7 @@ BEGIN {
         TEST_NO_STASH
         TEST_NO_AFTER_NO_OVERRIDE
         TEST_BAD_CALL_PARAMETER
+        TEST_WRAP_PERL_BEHAVIOR_DIFFERENCE_CONSTANT_LIST
     ));
     eval {
         TestSimple->import(qw(TEST_BROKEN_OVERRIDE));
@@ -534,7 +552,7 @@ is(TEST_NO_AFTER_NO_OVERRIDE, 'no_after_no_override', "A constant that didn't ca
 like(TEST_BAD_CALL_PARAMETER, qr/^PANIC.*THIS_CONSTANT_DOES_NOT_EXIST has no symbol table entry/, "Non-existing constant under wrap_existing_import");
 
 # Afterwards check that the counters are OK
-our $call_counter = 18;
+our $call_counter = 19;
 our $after_and_override_call_counter = $call_counter - 2;
 is($TestSimple::CALL_COUNTER, $call_counter, "We didn't redundantly call various subs, we cache them in the stash");
 is($TestSimple::AFTER_COUNTER, $after_and_override_call_counter, "Our AFTER counter is always the same as our CALL counter (unless 'after' is clobbered), we only call this for interned values");
@@ -554,6 +572,35 @@ like($main::InvalidConstantMoarTestCoverage_error, qr/^PANIC.*has some value typ
 
 # Tests for the buildargs functionality
 is(do { no strict 'refs'; &{"CONSTANT_$_"} }, $_, "The buildargs-imported CONSTANT_$_ sub returns $_") for "A".."Z";
+
+# Tests for differences in Perl behavior
+{
+    my $ret = TEST_WRAP_PERL_BEHAVIOR_DIFFERENCE_CONSTANT_LIST();
+    # Note that this isn't actually a behavior difference in the
+    # public API. From the point of view of the user these subs still
+    # return a list. The difference is just in what you get if you
+    # inspect the symbol table:
+    #
+    # $ /home/v-perlbrew/perl5/perlbrew/perls/perl-5.14.2/bin/perl -wle 'use constant TEST => qw(a b c); print for $], TEST(), ref $main::{TEST} || "N/A"'
+    # 5.014002
+    # a
+    # b
+    # c
+    # N/A
+    # $ /home/v-perlbrew/perl5/perlbrew/perls/perl-5.19.6/bin/perl -wle 'use constant TEST => qw(a b c); print for $], TEST(), ref $main::{TEST} || "N/A"'
+    # 5.019006
+    # a
+    # b
+    # c
+    # ARRAY
+    if ($ret->[0] eq 'ok') {
+        is_deeply($ret->[1], [qw(a b c)], "Under perl $] constant.pm with a list returns an ARRAY");
+    } elsif ($ret->[0] eq 'error') {
+        like($ret->[1], qr/PANIC:.*return one value.*returns 3 values/, "Under perl $] constant.pm just returns a list (non-constant)");
+    } else {
+        fail("We returned something we didn't expect: <$ret->[0]>/<$ret->[1]>");
+    }
+}
 
 package main::frame;
 use strict;
