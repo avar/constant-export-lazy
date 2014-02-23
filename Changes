@@ -2,6 +2,8 @@ Revision history for Constant::Export::Lazy
 
 {{$NEXT}}
 
+0.05 2014-02-23 16:37:00
+
     - Fix a minor failing test failing due to making an assumption
       about the internal workings of constant.pm that worked in 5.19.*
       but not in earlier perl versions.
