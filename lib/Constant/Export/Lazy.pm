@@ -703,8 +703,8 @@ structure you can pass in:
 This is a key-value pair list of constant names to either a subroutine
 or a hash with L</call> and optional L<options|/options
 (local)>. Internally we just convert the former type of call into the
-latter, i.e. C<CONST => sub {...}> becomes C<CONST => { call => sub {
-... } }>.
+latter, i.e. C<<CONST => sub {...}>> becomes C<<CONST => { call => sub {
+... } }>>.
 
 =head3 call
 
