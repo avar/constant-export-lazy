@@ -4,6 +4,8 @@ Revision history for Constant::Export::Lazy
 
     - Trivial POD formatting error fix, no code changes at all.
 
+    - Other POD rewording/documentation fixes.
+
 0.05 2014-02-23 16:37:00
 
     - Fix a minor failing test failing due to making an assumption

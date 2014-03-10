@@ -826,12 +826,16 @@ after they're defined, or push known constants to a hash somewhere so
 they can all be retrieved by some complimentary API that e.g. spews
 out "all known settings".
 
+You must C<return:> from this subroutine, if anything's returned from
+it we'll die, this is to reserve any returning of values for future
+use.
+
 =head3 stash
 
 This is a reference that you can provide for your own use, we don't
 care what's in it. It'll be accessible via the L<context
 object|Constant::Export::Lazy/"CONTEXT OBJECT">'s C<stash> method
-(e.g. C<<my $stash = $ctx->stash> for L</call>, C</override> and
+(i.e. C<<<my $stash = $ctx->stash> for L</call>, C</override> and
 C</after> calls relevant to its scope, i.e. global if you define it
 globally, otherwise local if it's defined locally.
 
