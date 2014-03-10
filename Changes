@@ -2,9 +2,11 @@ Revision history for Constant::Export::Lazy
 
 {{$NEXT}}
 
+    - Test & documentation for the API of private_name_munger
+
     - Trivial POD formatting error fix, no code changes at all.
 
-    - Other POD rewording/documentation fixes.
+    - Other POD rewording/documentation fixes / additions.
 
 0.05 2014-02-23 16:37:00
 

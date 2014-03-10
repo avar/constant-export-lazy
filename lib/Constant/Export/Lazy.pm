@@ -885,6 +885,11 @@ a C<$ctx> object, just the name of the constant you might want to
 munge. To skip munging it return the empty list, otherwise return a
 munged name to be used in the private symbol table.
 
+We consider this a purely functional subroutine and you B<MUST> return
+the same munged name for the same C<$gimme> because we might resolve
+that C<$gimme> multiple times. Failure to do so will result your
+callbacks being redundantly re-defined.
+
 =head1 CONTEXT OBJECT
 
 As discussed above we pass around a context object to all callbacks

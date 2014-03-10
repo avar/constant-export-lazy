@@ -18,7 +18,16 @@ use Constant::Export::Lazy (
         BAZ => {
             call => sub { 'BAZ' },
             options => {
-                private_name_munger => sub { "$_[0]_INTERNAL" },
+                private_name_munger => sub { "$_[0]_BLAH_NAME" },
+            },
+        },
+        BLAH => {
+            call => sub {
+                $main::NUM_BLAH_CUSTOM_CALLS++;
+                return 'BLAH_CUSTOM';
+            },
+            options => {
+                private_name_munger => sub { $_[0] . '_' . $main::BLAH_NAME },
             },
         },
         ALWAYS_DEFINED_BLAH => sub { 'BLAH' },
@@ -56,8 +65,17 @@ is(CONST_OLD_2, 456, "We got a constant from the Exporter::import");
 ok(!exists &TestSimple::FOO, "We didn't define a FOO");
 ok(!exists &TestSimple::BAR, "We didn't define a BAR");
 ok(!exists &TestSimple::BAZ, "We didn't define a BAZ");
-is(TestSimple::BAZ_INTERNAL(), 'BAZ',  "We *did* define a BAZ as BAZ_INTERNAL");
+is(TestSimple::BAZ_BLAH_NAME(), 'BAZ',  "We *did* define a BAZ as BAZ_BLAH_NAME");
 is(TestSimple::ALWAYS_DEFINED_BLAH(), 'BLAH', "We *did* define a ALWAYS_DEFINED_BLAH");
+$main::BLAH_NAME = 'FOO';
+TestSimple->import('BLAH');
+is(BLAH(), "BLAH_CUSTOM", "We return BLAH from BLAH()");
+is(eval("TestSimple::BLAH_FOO()"), "BLAH_CUSTOM", "Importing BLAH with \$main::BLAH_NAME gives us 'BLAH_CUSTOM'");
+$main::BLAH_NAME = 'BAR';
+TestSimple->import('BLAH');
+is(eval("TestSimple::BLAH_BAR()"), "BLAH_CUSTOM", "Importing BLAH with \$main::BLAH_NAME gives us 'BLAH_CUSTOM'");
+is($main::NUM_BLAH_CUSTOM_CALLS, 2, "We re-called BLAH because you fucked up private_name_munger");
+
 {
     no strict 'refs';
     my $tmp;
