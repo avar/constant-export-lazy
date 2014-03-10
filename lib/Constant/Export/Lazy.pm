@@ -796,7 +796,7 @@ In an override subroutine C<return $value> will return a value to be
 used instead of the value we'd have retrieved from L</call>, doing a
 C<return;> on the other hand means you don't want to use the
 subroutine to override this constant, and we'll stop trying to do so
-and just call L/<call> to fleshen it.
+and just call L</call> to fleshen it.
 
 You can also get the value of L</call> by doing
 C<<$ctx->call($name)>>. We have some magic around override ensuring
@@ -805,7 +805,7 @@ symbol table.
 
 This means that calling C<<$ctx->call($name)>> multiple times in the
 scope of an override subroutine is the only way to get
-C<Constant::Export::Lazy> to call a L/<call> subroutine multiple
+C<Constant::Export::Lazy> to call a L</call> subroutine multiple
 times. We otherwise guarantee that these subs are only called once (as
 discussed in L</It's lazy> and L</call>).
 
