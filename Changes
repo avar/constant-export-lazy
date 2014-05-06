@@ -2,6 +2,16 @@ Revision history for Constant::Export::Lazy
 
 {{$NEXT}}
 
+    - No code changes at all. Just added tests to show that defining
+      constant subs like I'm doing it doesn't work under 5.19.x (see
+      "Re: How about having a recommended way to add constant subs
+      dynamically?" on perl5-porters) --
+      http://code.activestate.com/lists/perl5-porters/206929/
+
+      I'll fix that in future releases, but first I want to get some
+      test coverage on how defining constants works (or doesn't work)
+      on different perl versions.
+
 0.06 2014-03-10 21:14:32
 
     - Test & documentation for the API of private_name_munger
