@@ -2,6 +2,8 @@ Revision history for Constant::Export::Lazy
 
 {{$NEXT}}
 
+0.07 2014-05-06 21:51:39
+
     - No code changes at all. Just added tests to show that defining
       constant subs like I'm doing it doesn't work under 5.19.x (see
       "Re: How about having a recommended way to add constant subs
