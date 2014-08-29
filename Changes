@@ -2,6 +2,8 @@ Revision history for Constant::Export::Lazy
 
 {{$NEXT}}
 
+0.08 2014-08-29 10:57:41
+
     - Improve the error message we show when we can't find a constant,
       now actually mention the constant we can't find.
 
