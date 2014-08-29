@@ -5,6 +5,11 @@ Revision history for Constant::Export::Lazy
     - Improve the error message we show when we can't find a constant,
       now actually mention the constant we can't find.
 
+    - This module actually worked on 5.8, but I recently broke 5.8
+      support by adding a test that used 5.10 features, that's now
+      fixed and we'll skip that test on <5.10 (it's just for testing
+      the synopsis, not core functionality).
+
 0.07 2014-05-06 21:51:39
 
     - No code changes at all. Just added tests to show that defining
