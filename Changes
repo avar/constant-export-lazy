@@ -2,6 +2,14 @@ Revision history for Constant::Export::Lazy
 
 {{$NEXT}}
 
+    - Attempt to future-proof how we define the constant subs for
+      possible future perl core changes, see the "Is it time to
+      separate pad names from SVs?" thread on perl5-porters. No
+      functional changes for currently released perls.
+
+    - Minor POD fixes from a couple of patches sent in via RT #99956
+      and pull request #1 on GitHub.
+
 0.08 2014-08-29 10:57:41
 
     - Improve the error message we show when we can't find a constant,
