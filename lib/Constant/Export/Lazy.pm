@@ -340,7 +340,14 @@ sub call {
                 # Make the disabling of strict have as small as scope
                 # as possible.
                 no strict 'refs';
-                *$glob_name = sub () { use strict; $value };
+
+                # Future-proof against changes in perl that might not
+                # optimize the constant sub if $value is used
+                # elsewhere, we're passing it to the $after function
+                # just below. See the "Is it time to separate pad
+                # names from SVs?" thread on perl5-porters.
+                my $value_copy = $value;
+                *$glob_name = sub () { $value_copy };
             }
 
             # Maybe we have a callback that wants to know when we define
