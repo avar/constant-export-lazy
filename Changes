@@ -2,6 +2,8 @@ Revision history for Constant::Export::Lazy
 
 {{$NEXT}}
 
+0.09 2014-11-01 18:24:11
+
     - Attempt to future-proof how we define the constant subs for
       possible future perl core changes, see the "Is it time to
       separate pad names from SVs?" thread on perl5-porters. No
