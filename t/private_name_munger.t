@@ -72,7 +72,14 @@ TestSimple->import('BLAH');
 is(BLAH(), "BLAH_CUSTOM", "We return BLAH from BLAH()");
 is(eval("TestSimple::BLAH_FOO()"), "BLAH_CUSTOM", "Importing BLAH with \$main::BLAH_NAME gives us 'BLAH_CUSTOM'");
 $main::BLAH_NAME = 'BAR';
-TestSimple->import('BLAH');
+{
+    my $warnings = 0;
+    my $warning = '';
+    local $SIG{__WARN__} = sub { $warnings++; $warning = $_[0] };
+    TestSimple->import('BLAH');
+    is($warnings, 1, "We got 1 warning about redefining main::BLAH");
+    like($warning, qr/^Constant subroutine main::BLAH redefined/, "We got a warning for redefining main::BLAH");
+}
 is(eval("TestSimple::BLAH_BAR()"), "BLAH_CUSTOM", "Importing BLAH with \$main::BLAH_NAME gives us 'BLAH_CUSTOM'");
 is($main::NUM_BLAH_CUSTOM_CALLS, 2, "We re-called BLAH because you fucked up private_name_munger");
 

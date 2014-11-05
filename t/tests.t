@@ -532,6 +532,32 @@ BEGIN {
     };
 }
 
+# Check that the exporter didn't leak any other symbols
+for my $sigil (qw($ % @)) {
+    my $nr_errors = 0;
+    my $error;
+    eval qq[
+        # Quiet 'Useless use of a variable in void context' and any
+        # other warnings. Just testing if we get an error
+        no warnings;
+        # Make sure we have strict here
+        use strict;
+
+        ${sigil}TEST_CONSTANT_CONST;
+        1;
+    ] or do {
+        $nr_errors++;
+        $error = $@ || "Zombie Error";
+    };
+    is($nr_errors, 1, "Got an error on trying to use ${sigil}TEST_CONSTANT_CONST under strict");
+    like(
+        $error,
+        qr/Global symbol "\Q${sigil}TEST_CONSTANT_CONST\E" requires explicit package name/,
+        "We got an error from strict.pm when trying to use ${sigil}TEST_CONSTANT_CONST",
+    );
+}
+
+# Check our constant values
 is(CONST_OLD_1, 123, "We got a constant from the Exporter::import");
 is(CONST_OLD_2, 456, "We got a constant from the Exporter::import");
 is(TEST_CONSTANT_USE_CONSTANT_PM, 123 + 456 + 123 + 456 + 789 + 123 + 456 + 789, "We can use ->call() on Exporter::import constant.pm constants");

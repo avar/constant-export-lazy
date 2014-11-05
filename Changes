@@ -2,6 +2,18 @@ Revision history for Constant::Export::Lazy
 
 {{$NEXT}}
 
+    - The symbol exporter we were using was too eager and would export
+      the entire *GLOB of a given constant we were exporting. So as an
+      unintended side-effect exporting the constant CONST would also
+      defined $FOO, @FOO, %FOO etc. in that package. Now instead we'll
+      only export &FOO.
+
+      Upgrading to this release could cause compile-time errors in
+      existing code that implicitly relies on Constant::Export::Lazy
+      to define these package-level symbols, but those cases should
+      reveal genuine bugs. Code that doesn't rely on that side-effect
+      should work as before.
+
 0.09 2014-11-01 18:24:11
 
     - Attempt to future-proof how we define the constant subs for
