@@ -2,6 +2,8 @@ Revision history for Constant::Export::Lazy
 
 {{$NEXT}}
 
+0.10 2014-11-05 10:44:33
+
     - The symbol exporter we were using was too eager and would export
       the entire *GLOB of a given constant we were exporting. So as an
       unintended side-effect exporting the constant CONST would also
