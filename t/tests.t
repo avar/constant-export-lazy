@@ -572,7 +572,7 @@ ok(exists &TestSimple::__INTERNAL__TEST_CONSTANT_CALLED_FROM_OVERRIDDEN_ENV_NAME
 is(TEST_CONSTANT_REQUESTED, 98765, "Our requested constant has the right value");
 ok(!exists &TEST_CONSTANT_NOT_REQUESTED, "We shouldn't import TEST_CONSTANT_NOT_REQUESTED into this namespace...");
 is(TestSimple::TEST_CONSTANT_NOT_REQUESTED, 98765, "...but it should be defined in TestSimple::* so it'll be re-used as well");
-is(join(",", @{TEST_LIST()}), '3,4');
+is(join(",", @{TEST_LIST()}), '3,4', "We should get 3,4 from joining up TEST_LIST");
 is(TEST_NO_STASH, undef, "We'll return undef if we have no stash");
 is(TEST_NO_AFTER_NO_OVERRIDE, 'no_after_no_override', "A constant that didn't call 'after' or 'override'");
 like(TEST_BAD_CALL_PARAMETER, qr/^PANIC.*THIS_CONSTANT_DOES_NOT_EXIST has no symbol table entry/, "Non-existing constant under wrap_existing_import");
