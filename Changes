@@ -2,6 +2,22 @@ Revision history for Constant::Export::Lazy
 
 {{$NEXT}}
 
+    - This release only has changes to make the test suite more
+      portable, nothing else.
+
+    - Solve RT #95756 with the help of SPROUT, now we use B:: to test
+      if we actually generated constants instead of using
+      Data::Dump::Streamer.
+
+    - We're also more forgiving about failures in our B::Deparse
+      tests, and skip those tests on platforms where shelling out to
+      -MO=Deparse doesn't work.
+
+    - We now have no non-core test Prereqs. We just need a stock
+      v5.8.0 to have all the prereqs we need, and in theory this
+      module should work & run the test suite as far back as 5.000
+      with the right test prereqs installed.
+
 0.10 2014-11-05 10:44:33
 
     - The symbol exporter we were using was too eager and would export
