@@ -1,4 +1,5 @@
 package Constant::Export::Lazy;
+use 5.006;
 use strict;
 use warnings;
 
@@ -930,6 +931,13 @@ there's no stash reference defined.
 =head1 AUTHOR
 
 Ævar Arnfjörð Bjarmason <avar@cpan.org>
+
+=head1 COPYRIGHT AND LICENSE
+
+This software is copyright (c) 2013 by Ævar Arnfjörð Bjarmason <avar@cpan.org>
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
 
 =cut
 
