@@ -117,6 +117,11 @@ sub import {
             if (exists $constants->{$gimme}) {
                 $ctx->call($gimme);
             } elsif ($wrap_existing_import) {
+                # We won't even die on $wrap_existing_import if that
+                # importer doesn't know about this $gimme, but
+                # hopefully they're just about to die with an error
+                # similar to ours if they don't know about the
+                # requested constant.
                 push @leftover_gimme => $gimme;
             } else {
                 die "PANIC: We don't have the constant '$gimme' to export to you";
@@ -203,13 +208,16 @@ sub call {
     my ($private_name, $glob_name, $alias_as);
     my $make_private_glob_and_alias_name = sub {
         # Checking "exists $constants->{$gimme}" here to avoid
-        # autovivification would be redundant since we'll die before
-        # we get here unless $wrap_existing_import is true above. If
-        # $wrap_existing_import is true we'll have called the import()
-        # we're wrapping if it's a constant we don't know about, or
-        # it's being called from ->call(), in which case
-        # $CALL_SHOULD_NOT_ALIAS is true and we won't be calling this
-        # sub unless $constants->{$gimme} exists. Since this won't
+        # autovivification would be redundant since we won't call this
+        # if $wrap_existing_import is true, otherwise
+        # $constants->{$gimme} is guaranteed to exist. See the
+        # assertion just a few lines above this code.
+        #
+        # If $wrap_existing_import is true and we're handling a
+        # constant we don't know about we'll have called the import()
+        # we're wrapping, or we're being called from ->call(), in
+        # which case we won't be calling this sub unless
+        # $constants->{$gimme} exists.
         $private_name = exists $constants->{$gimme}->{options}->{private_name_munger}
                              ? $constants->{$gimme}->{options}->{private_name_munger}->($gimme)
                              : $gimme;
@@ -239,9 +247,13 @@ sub call {
             $value = $value[0];
         }
     } elsif (do {
+        # Check if this is a constant we've defined already, in which
+        # case we can just return its value.
+        #
         # If we got this far we know we're going to want to call
         # $make_private_glob_and_alias_name->(). It'll also be used by
-        # branches further down.
+        # the "else" branch below if we end up having to define this
+        # constant.
         $make_private_glob_and_alias_name->();
 
         exists $symtab->{$private_name};
@@ -397,9 +409,10 @@ Constant::Export::Lazy - Utility to write lazy exporters of constant subroutines
 
 =head1 SYNOPSIS
 
-This increasingly verbose example of a C<My::Constants> package that
-you can write using C<Constant::Export::Lazy> demonstrates most of our
-major features (from F<t/lib/My/Constants.pm> in the source distro):
+This as an example of a C<My::Constants> package that you can write
+using C<Constant::Export::Lazy> that demonstrates most of its main
+features. This is from the file F<t/lib/My/Constants.pm> in the source
+distro:
 
     package My::Constants;
     use strict;
@@ -650,7 +663,7 @@ And running it gives:
 
 =head1 DESCRIPTION
 
-This is a utility to write lazy exporters of constant
+This is a library to write lazy exporters of constant
 subroutines. It's not meant to be a user-facing constant exporting
 API, it's something you use to write user-facing constant exporting
 APIs.
@@ -660,10 +673,10 @@ or another, why did I need to write this one?
 
 =head2 It's lazy
 
-Our constants fleshened via callbacks that are guaranteed to be called
-only once for the lifetime of the process (not once per importer or
-whatever), and we only call the callbacks lazily if someone actually
-requests that a constant of ours be defined.
+Our constants are fleshened via callbacks that are guaranteed to be
+called only once for the lifetime of the process (not once per
+importer or whatever), and we only call the callbacks lazily if
+someone actually requests that a constant of ours be defined.
 
 This makes it easy to have one constant exporting module that runs in
 different environments, and generates some subset of its constants
@@ -675,8 +688,8 @@ available everywhere, or make certain assumptions about the
 environment they're running under that may not be true across all your
 environments.
 
-By only defining those constants you actually need via callbacks that
-you provide managing all these special-cases becomes a lot easier.
+By only defining those constants you actually need via callbacks
+managing all these special-cases becomes a lot easier.
 
 =head2 It makes it easier to manage creating constants that require other constants
 
@@ -688,17 +701,19 @@ Now say you have several hundred constants like that, managing the
 inter-dependencies and ensuring that they're all defined in the right
 order with dependencies before dependents quickly gets messy.
 
-Constant::Import::Lazy takes away all this complexity. When you define
-a constant you get a callback object that can give you the value of
-other constants.
+All this complexity becomes a non-issue when you use this module. When
+you define a constant you get a callback object that can give you the
+value of other constants.
 
 When you look up another constant we'll either generate it if it
-hasn't been materialized yet, look it up in the symbol table if it
-has.
+hasn't been materialized yet, or look up the materialized value in the
+symbol table if it has.
 
 Thus we end up with a Makefile-like system where you can freely use
-whatever other constants you like when defining your constants, you
-only have to be careful not to introduce circular dependencies.
+whatever other constants you like when defining your constants, and
+we'll lazily define the entire tree of constants on-demand.
+
+You only have to be careful not to introduce circular dependencies.
 
 =head1 API
 
@@ -747,9 +762,9 @@ L<synopsis|/SYNOPSIS>) to strip or map parameters to e.g. implement
 support for C<%EXPORT_TAGS>, or to do any other arbitrary mapping.
 
 This callback will be called with a reference to the parameters passed
-to import, and for convenience with the L<constants|/constants> with
-the hash you provided (e.g. for introspecting the stashes of
-constants, see the L<synopsis|/SYNOPSIS> example.
+to import, and for convenience with the L<constants hash|/constants>
+you provided (e.g. for introspecting the stashes of constants, see the
+L<synopsis|/SYNOPSIS> example.
 
 This is expected to return an array with a list of constants to
 import, or the empty list if we should discard the return value of
@@ -786,7 +801,8 @@ won't have to change any of the old code.
 We'll handle calling subroutines generated with perl's own
 L<constant.pm|constant> (including "list" constants), but we'll die in
 C<call> if we call a foreign subroutine that returns more than one
-value.
+value, i.e. constants defined as C<use constant FOO => (1, 2, 3)>
+instead of C<use constant FOO => [1, 2, 3]>.
 
 =head3 override
 
