@@ -2,6 +2,19 @@ Revision history for Constant::Export::Lazy
 
 {{$NEXT}}
 
+    - Fix a long-standing bug of being unable to define constants from
+      sub-packages at "call" time.
+
+      If you were in the callback for YourExporter::CONSTANT and
+      required a module that also used YourExporter module to get some
+      YourExporter::UNRELATED_CONSTANT we wouldn't create that symbol
+      for that module and we'd most likely die at compile-time.
+
+      The reason for this is that we had a really naïve notion of when
+      we should be interning constants purely based on whether we were
+      in a nested "call" subroutine. Now we keep track of what
+      constants packages want and intern those symbols they request.
+
     - Clarify & reword some POD & inline comments.
 
 0.12 2014-12-19 09:44:37

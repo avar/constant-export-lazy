@@ -115,6 +115,17 @@ sub import {
         my @leftover_gimme;
         for my $gimme (@gimme) {
             if (exists $constants->{$gimme}) {
+                # We only want to alias constants into the importer's
+                # package if the constant is on the import list, not
+                # if it's just needed within some $ctx->call() when
+                # defining another constant.
+                #
+                # To disambiguate these two cases we maintain a
+                # globally dynamically scoped variable with the
+                # constants that have been requested, and we note
+                # who've they've been requested by.
+                local $Constant::Export::Lazy::Ctx::CALL_SHOULD_ALIAS_FROM_TO->{$pkg_importer}->{$gimme} = undef;
+
                 $ctx->call($gimme);
             } elsif ($wrap_existing_import) {
                 # We won't even die on $wrap_existing_import if that
@@ -186,7 +197,7 @@ sub new {
     bless \%args => $class;
 }
 
-our $CALL_SHOULD_NOT_ALIAS;
+our $CALL_SHOULD_ALIAS_FROM_TO = {};
 our $GETTING_VALUE_FOR_OVERRIDE = {};
 
 sub call {
@@ -263,12 +274,6 @@ sub call {
         my $symtab_value = $symtab->{$private_name};
         $value = &$symtab_value();
     } else {
-        # We only want to alias constants into the importer's package
-        # if the constant is on the import list, not if it's just
-        # needed within some $ctx->call() when defining another
-        # constant.
-        local $CALL_SHOULD_NOT_ALIAS = 1;
-
         my $override = $constants->{$gimme}->{options}->{override};
         my $stash    = $constants->{$gimme}->{options}->{stash};
 
@@ -281,8 +286,10 @@ sub call {
 
         my @overriden_value;
         my $source;
-        if ($override and not exists $GETTING_VALUE_FOR_OVERRIDE->{$gimme}) {
-            local $GETTING_VALUE_FOR_OVERRIDE->{$gimme} = undef;
+        if ($override and
+            not (exists $GETTING_VALUE_FOR_OVERRIDE->{$pkg_importer} and
+                 exists $GETTING_VALUE_FOR_OVERRIDE->{$pkg_importer}->{$gimme})) {
+            local $GETTING_VALUE_FOR_OVERRIDE->{$pkg_importer}->{$gimme} = undef;
             @overriden_value = $override->($ctx, $gimme);
         }
         if (@overriden_value) {
@@ -299,7 +306,8 @@ sub call {
             $value = $constants->{$gimme}->{call}->($ctx);
         }
 
-        unless (exists $GETTING_VALUE_FOR_OVERRIDE->{$gimme}) {
+        unless (exists $GETTING_VALUE_FOR_OVERRIDE->{$pkg_importer} and
+                exists $GETTING_VALUE_FOR_OVERRIDE->{$pkg_importer}->{$gimme}) {
             # Instead of doing `sub () { $value }` we could also
             # use the following trick that constant.pm uses if
             # it's true that `$] > 5.009002`:
@@ -375,7 +383,48 @@ sub call {
         }
     }
 
-    unless ($CALL_SHOULD_NOT_ALIAS) {
+    # So? What's this entire evil magic about?
+    #
+    # Early on in the history of this module I decided that everything
+    # that needed to call or define a constant would just go through
+    # $ctx->call($gimme), including things called via the import().
+    #
+    # This makes some parts of this module much simpler, since we
+    # don't have e.g. a $ctx->call_and_intern($gimme) to define
+    # constants for the first time, v.s. a
+    # $ctx->get_interned_value($gimme). We just have one
+    # $ctx->call($gimme) that DWYM. You just request a value, it does
+    # the right thing, and you don't have to worry about it.
+    #
+    # However, we have to worry about the following cases:
+    #
+    # * Someone in "user" imports YourExporter::CONSTANT, we define
+    #   YourExporter::CONSTANT and alias user::CONSTANT to it. Easy,
+    #   this is the common case.
+    #
+    # * Ditto, but YourExporter::CONSTANT needs to get the value of
+    #   YourExporter::CONSTANT_NESTED to define its own value, we want
+    #   to export YourExporter::CONSTANT to user::CONSTANT but *NOT*
+    #   YourExporter::CONSTANT_NESTED. We don't want to leak dependent
+    #   constants like that.
+    #
+    # * The "user" imports YourExporter::CONSTANT, this in turns needs
+    #   to call Some::Module::function() and Some::Module::function()
+    #   needs YourExporter::UNRELATED_CONSTANT
+    #
+    # * When we're in the "override" callback for
+    #   YourExporter::CONSTANT we don't want to intern
+    #   YourExporter::CONSTANT, but if we call some unrelated
+    #   YourExporter::ANOTHER_CONSTANT while in the override we want
+    #   to intern (but not export!) that value.
+    #
+    # So to do all this we're tracking on a per importer/constant pair
+    # basis who requested what during import()-time, and whether we're
+    # currently in the scope of an "override" for a given constant.
+    if (not (exists $GETTING_VALUE_FOR_OVERRIDE->{$pkg_importer} and
+             exists $GETTING_VALUE_FOR_OVERRIDE->{$pkg_importer}->{$gimme}) and
+        exists $CALL_SHOULD_ALIAS_FROM_TO->{$pkg_importer} and
+        exists $CALL_SHOULD_ALIAS_FROM_TO->{$pkg_importer}->{$gimme}) {
         no strict 'refs';
         # Alias e.g. user::CONSTANT to YourExporter::CONSTANT (well,
         # actually YourExporter::$private_name)
