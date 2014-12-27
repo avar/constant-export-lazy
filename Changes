@@ -15,6 +15,11 @@ Revision history for Constant::Export::Lazy
       in a nested "call" subroutine. Now we keep track of what
       constants packages want and intern those symbols they request.
 
+    - We now use FATAL "recursion" warnings in Constant::Export::Lazy,
+      if we've gone above perl's built-in recursion limit of 100 we'd
+      rather die early than slowly exhaust all the memory on the
+      system and have the OOM killer kill us when this happens.
+
     - Add a new test to see if we're actually defining constants, this
       test piggy-backs on the warnings emitted when our constant
       subroutines are overridden.

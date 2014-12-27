@@ -2,6 +2,7 @@ package Constant::Export::Lazy;
 use 5.006;
 use strict;
 use warnings;
+use warnings FATAL => "recursion";
 
 sub import {
     my ($class, %args) = @_;
