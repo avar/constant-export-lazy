@@ -438,9 +438,9 @@ sub call {
 sub stash {
     my ($ctx) = @_;
 
-    # We used to die here but that makes e.g. having a global "after"
-    # callback tedious. Just return an empty list instead so we can do
-    # things like:
+    # We used to die here when no $ctx->{stash} existed, but that
+    # makes e.g. having a global "after" callback tedious. Just return
+    # undef instead so we can do things like:
     #
     #    if (defined(my $stash = $ctx->stash)) { ... }
     #
