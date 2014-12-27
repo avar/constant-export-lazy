@@ -15,6 +15,10 @@ Revision history for Constant::Export::Lazy
       in a nested "call" subroutine. Now we keep track of what
       constants packages want and intern those symbols they request.
 
+    - Add a new test to see if we're actually defining constants, this
+      test piggy-backs on the warnings emitted when our constant
+      subroutines are overridden.
+
     - Clarify & reword some POD & inline comments.
 
 0.12 2014-12-19 09:44:37
