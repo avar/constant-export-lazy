@@ -20,6 +20,10 @@ Revision history for Constant::Export::Lazy
       rather die early than slowly exhaust all the memory on the
       system and have the OOM killer kill us when this happens.
 
+    - Get rid of the Constant::Export::Lazy::Ctx::new()
+      method. Instead we just bless directly into the package, this is
+      just a nano-optimization.
+
     - Add a new test to see if we're actually defining constants, this
       test piggy-backs on the warnings emitted when our constant
       subroutines are overridden.
