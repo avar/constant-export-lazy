@@ -222,8 +222,8 @@ sub Constant::Export::Lazy::Ctx::call {
         # This is in case $ctx->call() is used on a constant defined
         # by constant.pm. See the giant comment about constant.pm
         # below.
-        if (exists &{"$pkg_stash\::$gimme"}) {
-            my @value = do { no strict 'refs'; *{"$pkg_stash\::$gimme"}{CODE}->() };
+        if (my $code = $pkg_stash->can($gimme)) {
+            my @value = $code->();
             die "PANIC: We only support subs that return one value with wrap_existing_import, $gimme returns " . @value . " values" if @value > 1;
             $value = $value[0];
         } else {
@@ -239,11 +239,11 @@ sub Constant::Export::Lazy::Ctx::call {
         # constant.
         $make_private_glob_and_alias_name->();
 
-        exists &{"$pkg_stash\::$private_name"};
+        $pkg_stash->can($private_name);
     }) {
         # This is for constants that *we've* previously defined, we'll
         # always use our own $private_name.
-        $value = do { no strict 'refs'; *{"$pkg_stash\::$private_name"}{CODE}->() };
+        $value = $pkg_stash->can($private_name)->();
     } else {
         my $override = $constants->{$gimme}->{options}->{override};
         my $stash    = $constants->{$gimme}->{options}->{stash};
