@@ -2,6 +2,8 @@ Revision history for Constant::Export::Lazy
 
 {{$NEXT}}
 
+0.14 2015-12-09 13:40:03
+
    - Simplify a lot of special cases around CODE / constant.pm
      generated constants by using more generic syntax to call our
      constants.
