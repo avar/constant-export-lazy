@@ -2,6 +2,13 @@ Revision history for Constant::Export::Lazy
 
 {{$NEXT}}
 
+   - Simplify a lot of special cases around CODE / constant.pm
+     generated constants by using more generic syntax to call our
+     constants.
+
+     We now just use ->can($name)->() instead of all this manual
+     munging of the symbol table.
+
 0.13 2014-12-27 21:23:06
 
     - Fix a long-standing bug of being unable to define constants from
