@@ -18,19 +18,14 @@ sub import {
           : undef
         : undef
     );
-    my $existing_import;
-    my $caller_import_name = $caller . '::import';
+    my $existing_import = $caller->can("import");
 
     # Sanity check whether we do or don't have an existing 'import'
     # sub with the wrap_existing_import option:
-    my $has_import_already = do { no strict 'refs'; no warnings 'once'; *{$caller_import_name}{CODE} } ? 1 : 0;
-    {
-        if ($wrap_existing_import) {
-            die "PANIC: We need an existing 'import' with the wrap_existing_import option" unless $has_import_already;
-            $existing_import = \&{$caller_import_name};
-        } else {
-            die "PANIC: We're trying to clobber an existing 'import' subroutine without having the 'wrap_existing_import' option" if $has_import_already;
-        }
+    if ($wrap_existing_import) {
+        die "PANIC: We need an existing 'import' with the wrap_existing_import option" unless $existing_import;
+    } else {
+        die "PANIC: We're trying to clobber an existing 'import' subroutine without having the 'wrap_existing_import' option" if $existing_import;
     }
 
     # Munge the %args we're given so users can be lazy and give sub {
@@ -52,7 +47,7 @@ sub import {
 
     no strict 'refs';
     no warnings 'redefine'; # In case of $wrap_existing_import
-    *{$caller_import_name} = sub {
+    *{$caller . '::import'} = sub {
         use strict;
         use warnings;
 
