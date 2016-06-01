@@ -2,6 +2,8 @@ Revision history for Constant::Export::Lazy
 
 {{$NEXT}}
 
+0.15 2016-06-01 13:42:03
+
    - Continue the change I made in 0.14 and replace the remaining
      occurrences of manual CODE symbol table munging with ->can()
      where possible.
