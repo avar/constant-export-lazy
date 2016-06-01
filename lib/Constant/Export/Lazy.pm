@@ -304,9 +304,9 @@ sub Constant::Export::Lazy::Ctx::call {
             #   Internals::inc_sub_generation() in constant.pm
             #   replaced with mro::method_changed_in($pkg)
             #
-            #  * perl-5.9.4-1714-g41892db - Now unused
-            #    Internals::inc_sub_generation() removed from the
-            #    core.
+            # * perl-5.9.4-1714-g41892db - Now unused
+            #   Internals::inc_sub_generation() removed from the
+            #   core.
             #
             # * v5.10.0-3508-gf7fd265 (and v5.10.0-3523-g81a8de7)
             #   - MRO cache is changed to be flushed after all
