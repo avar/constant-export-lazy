@@ -2,6 +2,10 @@ Revision history for Constant::Export::Lazy
 
 {{$NEXT}}
 
+   - My changes in 0.15 broke things for anyone using this package in
+     conjunction with UNIVERSAL. See the end of the section discussing
+     wrap_existing_import in the documentation for more details.
+
 0.15 2016-06-01 13:42:03
 
    - Continue the change I made in 0.14 and replace the remaining
