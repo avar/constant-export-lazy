@@ -437,7 +437,7 @@ Constant::Export::Lazy - Utility to write lazy exporters of constant subroutines
 
 =head1 SYNOPSIS
 
-This as an example of a C<My::Constants> package that you can write
+This is an example of a C<My::Constants> package that you can write
 using C<Constant::Export::Lazy> that demonstrates most of its main
 features. This is from the file F<t/lib/My/Constants.pm> in the source
 distro:
@@ -754,8 +754,8 @@ structure you can pass in:
 This is a key-value pair list of constant names to either a subroutine
 or a hash with L</call> and optional L<options|/options
 (local)>. Internally we just convert the former type of call into the
-latter, i.e. C<<CONST => sub {...}>> becomes C<<CONST => { call => sub {
-... } }>>.
+latter, i.e. C<< CONST => sub {...} >> becomes C<< CONST => { call =>
+sub { ... } } >>.
 
 =head3 call
 
