@@ -516,11 +516,12 @@ BEGIN {
         like($error, qr/^PANIC: Don't return anything from 'after' routines/, "Testing broken after callback");
     };
     eval {
+        local $SIG{__WARN__} = sub {};
         TestSimple->import(qw(TEST_CONSTANT_NO_CALL_SUB));
         1;
     } or do {
         my $error = $@ || "Zombie Error";
-        like($error, qr/^Can't use an undefined value as a subroutine reference/, "Testing broken constant with no override and no callback");
+        like($error, qr/^Can't use.*as a subroutine ref/, "Testing broken constant with no override and no callback");
     };
     for my $pkg (qw(TestSimple TestSimple::NoOptions)) {
         eval {
