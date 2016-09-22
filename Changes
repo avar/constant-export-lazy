@@ -2,6 +2,11 @@ Revision history for Constant::Export::Lazy
 
 {{$NEXT}}
 
+    - Only a documentation & test changes. Documented that if the
+      "override" callback always provides a value you can omit the
+      "call" callback, which was always implicitly supported but not
+      documented or tested.
+
 0.17 2016-07-15 21:10:49
 
    - Fix grammar & POD formatting in POD.

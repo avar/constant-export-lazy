@@ -290,6 +290,21 @@ use Constant::Export::Lazy (
 
             return 12345;
         },
+        TEST_CONSTANT_OVERRIDE_NO_CALL_SUB => {
+            options => {
+                override => sub {
+                    $OVERRIDE_COUNTER++;
+                    my ($ctx, $name) = @_;
+
+                    return "I am $name";
+                },
+                after => sub {
+                    $AFTER_COUNTER++;
+                    return;
+                },
+            },
+        },
+        TEST_CONSTANT_NO_CALL_SUB => {},
     },
     options => {
         wrap_existing_import => 1,
@@ -484,6 +499,7 @@ BEGIN {
         TEST_BAD_CALL_PARAMETER
         TEST_WRAP_PERL_BEHAVIOR_DIFFERENCE_CONSTANT_LIST
         TEST_CONSTANT_CIRCULAR_DEPENDENCY
+        TEST_CONSTANT_OVERRIDE_NO_CALL_SUB
     ));
     eval {
         TestSimple->import(qw(TEST_BROKEN_OVERRIDE));
@@ -498,6 +514,13 @@ BEGIN {
     } or do {
         my $error = $@ || "Zombie Error";
         like($error, qr/^PANIC: Don't return anything from 'after' routines/, "Testing broken after callback");
+    };
+    eval {
+        TestSimple->import(qw(TEST_CONSTANT_NO_CALL_SUB));
+        1;
+    } or do {
+        my $error = $@ || "Zombie Error";
+        like($error, qr/^Can't use an undefined value as a subroutine reference/, "Testing broken constant with no override and no callback");
     };
     for my $pkg (qw(TestSimple TestSimple::NoOptions)) {
         eval {
@@ -605,15 +628,16 @@ is(TEST_NO_AFTER_NO_OVERRIDE, 'no_after_no_override', "A constant that didn't ca
 like(TEST_BAD_CALL_PARAMETER, qr/^PANIC.*THIS_CONSTANT_DOES_NOT_EXIST has no symbol table entry/, "Non-existing constant under wrap_existing_import");
 ok(!exists &TEST_CONSTANT_CIRCULAR_DEPENDENCY_CONSTANT, "We didn't import TEST_CONSTANT_CIRCULAR_DEPENDENCY_CONSTAN");
 ok(!exists &TEST_CONSTANT_NOT_CIRCULAR_DEPENDENCY_54321, "We didn't import TEST_CONSTANT_NOT_CIRCULAR_DEPENDENCY_54321");
+is(TEST_CONSTANT_OVERRIDE_NO_CALL_SUB, "I am TEST_CONSTANT_OVERRIDE_NO_CALL_SUB", "Fleshened a constant without call => via override");
 
 # Afterwards check that the counters are OK
 our $call_counter = 22;
-our $after_and_override_call_counter = $call_counter - 2;
+our $after_and_override_call_counter = $call_counter - 1;
 is($TestSimple::CALL_COUNTER, $call_counter, "We didn't redundantly call various subs, we cache them in the stash");
 is($TestSimple::AFTER_COUNTER, $after_and_override_call_counter, "Our AFTER counter is always the same as our CALL counter (unless 'after' is clobbered), we only call this for interned values");
 is(TEST_AFTER_OVERRIDE, 123456, "We have TEST_AFTER_OVERRIDE defined");
 is($TestSimple::AFTER_OVERRIDE_COUNTER, 2, "We correctly call 'after', except when they've been clobbered");
-is($TestSimple::OVERRIDE_COUNTER, $after_and_override_call_counter + 1, "We correctly call overrides, except when they've been clobbered");
+is($TestSimple::OVERRIDE_COUNTER, $after_and_override_call_counter + 2, "We correctly call overrides, except when they've been clobbered");
 
 # Other tests of custom Constant::Export::Lazy pacakges for added
 # coverage.

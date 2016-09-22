@@ -767,6 +767,10 @@ It's guaranteed that this sub will only ever be called once for the
 lifetime of the process, except if you manually call it multiple times
 during an L</override>.
 
+Providing this callback subroutine can be omitted if the L</override>
+callback always fleshens the value by itself. See the L</override>
+documentation for more details.
+
 =head3 options (local)
 
 Our options hash to override the global L</options>. The semantics are
@@ -884,6 +888,21 @@ scope of an override subroutine is the only way to get
 C<Constant::Export::Lazy> to call a L</call> subroutine multiple
 times. We otherwise guarantee that these subs are only called once (as
 discussed in L</It's lazy> and L</call>).
+
+It also means that if you guarantee that you B<don't> call C<<
+$ctx->call($name) >> at all in your override subroutine you can omit
+the L</call> callback. This is useful e.g. if the L</stash> passes
+some option like C<fleshen_from_file> which the C<override> callback
+picks up. In that case the constant would always be fleshened from the
+content of the file by the C<override> callback, and we'd never call
+the callback subroutine, so providing it would be pointless and
+confusing.
+
+If you don't provide L</call> as described above and screw up your
+C<override> definition such that the override doesn't provide an
+override, we'll end up dying with the same error you'd get if you
+called C<< undef()->() >> as we try to fleshen your non-overridden
+contestant in vain.
 
 =head3 after
 
