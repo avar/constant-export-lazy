@@ -2,6 +2,10 @@ Revision history for Constant::Export::Lazy
 
 {{$NEXT}}
 
+    - Updated Dist::Zilla::Plugin::ReadmeFromPod to fix an encoding
+      issue that rendered by name as "ï¿½var Arnfjï¿½rï¿½ Bjarmason"
+      in the generated README.
+
 0.18 2016-09-22 09:53:54
 
     - Only a documentation & test changes. Documented that if the
