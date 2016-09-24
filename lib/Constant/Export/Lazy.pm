@@ -158,10 +158,10 @@ sub _normalize_arguments {
 
     my %default_options = %{ $args{options} || {} };
     my $has_default_options = keys %default_options ? 1 : 0;
-    my $constants = $args{constants};
+    my %constants = %{$args{constants}};
     my %new_constants;
-    for my $constant_name (keys %$constants) {
-        my $value = $constants->{$constant_name};
+    for my $constant_name (keys %constants) {
+        my $value = $constants{$constant_name};
         if (ref $value eq 'CODE') {
             $new_constants{$constant_name} = {
                 call    => $value,
