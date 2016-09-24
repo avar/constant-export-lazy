@@ -376,6 +376,25 @@ use Constant::Export::Lazy (
             "no " . $ctx->call('TEST_CONSTANT_OPTIONS');
         },
         TEST_CONSTANT_OPTIONS => sub { "options" },
+        TEST_CONSTANT_NO_OPTIONS_CTX => sub { $_[0]->{constants} },
+    },
+);
+
+package TestSimple::NoCall;
+use strict;
+use warnings;
+
+use Constant::Export::Lazy (
+    constants => {
+        TEST_CONSTANT_NO_CALL => {
+            options => {
+                override => sub {
+                    my ($ctx, $name) = @_;
+
+                    return $ctx->{constants}->{$name};
+                },
+            }
+        },
     },
 );
 
@@ -542,6 +561,10 @@ BEGIN {
     TestSimple::NoOptions->import(qw(
         TEST_CONSTANT_NO_OPTIONS
         TEST_CONSTANT_OPTIONS
+        TEST_CONSTANT_NO_OPTIONS_CTX
+    ));
+    TestSimple::NoCall->import(qw(
+        TEST_CONSTANT_NO_CALL
     ));
     TestSimple::NoWrapExistingImport->import(qw(
         TEST_BAD_CALL_PARAMETER_NO_WRAP_EXISTING_IMPORT
@@ -649,6 +672,17 @@ like($main::InvalidWrapExistingImport_error, qr/^PANIC.*We need an existing 'imp
 like($main::ClobberingWithoutWrapExistingImport_error, qr/^PANIC:.*trying to clobber an existing 'import' subroutine/, "Clobbering import without wrap_existing_import");
 like($main::InvalidConstant_error, qr/^PANIC.*has some value type we don't know about.*ref = ARRAY/, "Calling import with invalid constants");
 like($main::InvalidConstantMoarTestCoverage_error, qr/^PANIC.*has some value type we don't know about.*ref = Undef/, "Calling import with invalid constants (Undef)");
+
+# Test that when no options are supplied that we don't autovivifify
+# the options ourselves
+{
+    while (my ($name, $hash) = each %{+TEST_CONSTANT_NO_OPTIONS_CTX}) {
+        ok((not exists $hash->{options}), "When no options are specified we have no $name\->{options}");
+    }
+}
+
+# Ditto no autovivifify when we don't have a "call" method.
+ok((not exists TEST_CONSTANT_NO_CALL->{call}), "When no 'call' is specified we don't have \$name->{call}");
 
 # Tests for the buildargs functionality
 is(do { no strict 'refs'; &{"CONSTANT_$_"} }, $_, "The buildargs-imported CONSTANT_$_ sub returns $_") for "A".."Z";

@@ -157,6 +157,7 @@ sub _normalize_arguments {
     my (%args) = @_;
 
     my %default_options = %{ $args{options} || {} };
+    my $has_default_options = keys %default_options ? 1 : 0;
     my $constants = $args{constants};
     my %new_constants;
     for my $constant_name (keys %$constants) {
@@ -164,15 +165,24 @@ sub _normalize_arguments {
         if (ref $value eq 'CODE') {
             $new_constants{$constant_name} = {
                 call    => $value,
-                options => \%default_options,
+                ($has_default_options
+                 ? (options => \%default_options)
+                 : ()),
             };
         } elsif (ref $value eq 'HASH') {
+            my %options = %{ $value->{options} || {} };
             $new_constants{$constant_name} = {
-                call    => $value->{call},
-                options => {
-                    %default_options,
-                    %{ $value->{options} || {} },
-                },
+                (exists $value->{call}
+                 ? (call => $value->{call})
+                 : ()),
+                (($has_default_options or keys %options)
+                 ? (
+                     options => {
+                         %default_options,
+                         %options,
+                     }
+                 )
+                 : ()),
             };
         } else {
             die sprintf "PANIC: The constant <$constant_name> has some value type we don't know about (ref = %s)",
@@ -215,12 +225,21 @@ sub Constant::Export::Lazy::Ctx::call {
         # we're wrapping, or we're being called from ->call(), in
         # which case we won't be calling this sub unless
         # $constants->{$gimme} exists.
-        $private_name = exists $constants->{$gimme}->{options}->{private_name_munger}
-                             ? $constants->{$gimme}->{options}->{private_name_munger}->($gimme)
-                             : $gimme;
+        $private_name = (
+            exists $constants->{$gimme}->{options}
+            ? $constants->{$gimme}->{options}->{private_name_munger}
+              ? $constants->{$gimme}->{options}->{private_name_munger}->($gimme)
+              : $gimme
+            : $gimme
+        );
+
+        # In case the ->($gimme) part of the above returns undef, we
+        # fallback to $gimme.
         $private_name = defined $private_name ? $private_name : $gimme;
+
         $glob_name = "${pkg_stash}::${private_name}";
         $alias_as  = "${pkg_importer}::${gimme}";
+
         return;
     };
 
@@ -252,8 +271,16 @@ sub Constant::Export::Lazy::Ctx::call {
         # always use our own $private_name.
         $value = $pkg_stash->can($private_name)->();
     } else {
-        my $override = $constants->{$gimme}->{options}->{override};
-        my $stash    = $constants->{$gimme}->{options}->{stash};
+        my $override = (
+            exists $constants->{$gimme}->{options}
+            ? $constants->{$gimme}->{options}->{override}
+            : undef
+        );
+        my $stash = (
+            exists $constants->{$gimme}->{options}
+            ? $constants->{$gimme}->{options}->{stash}
+            : undef
+        );
 
         # Only pass the stash around if we actually have it. Note that
         # "delete local $ctx->{stash}" is a feature new in 5.12.0, so
@@ -353,7 +380,12 @@ sub Constant::Export::Lazy::Ctx::call {
             # Maybe we have a callback that wants to know when we define
             # our constants, e.g. for printing something out, keeping taps
             # of what constants we have etc.
-            if (my $after = $constants->{$gimme}->{options}->{after}) {
+            my $after = (
+                exists $constants->{$gimme}->{options}
+                ? $constants->{$gimme}->{options}->{after}
+                : undef
+            );
+            if ($after) {
                 # Future-proof so we can do something clever with the
                 # return value in the future if we want.
                 my @ret = $after->($ctx, $gimme, $value, $source);

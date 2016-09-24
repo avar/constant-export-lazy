@@ -2,6 +2,17 @@ Revision history for Constant::Export::Lazy
 
 {{$NEXT}}
 
+    - Before this release we'd autovifify the "options" hash even if
+      no options were provided, due to our internal checking of
+      {options}->{$something}. Now "options will never be autovivified
+      by us.
+
+    - Similarly we'd materialize "call => undef" in cases where the
+      call subroutine wasn't supplied, so it couldn't be checked for
+      in e.g. an override callaback with "exists", we'd have to check
+      if it was true. Now the key won't be there if there's no "call"
+      callback.
+
 0.19 2016-09-24 07:24:48
 
     - Updated Dist::Zilla::Plugin::ReadmeFromPod to fix an encoding
