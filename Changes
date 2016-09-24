@@ -2,6 +2,8 @@ Revision history for Constant::Export::Lazy
 
 {{$NEXT}}
 
+0.20 2016-09-24 09:47:05
+
     - Changed the semantics of how we check for "import" subroutine
       that I initially tried to address in 0.16.
 
