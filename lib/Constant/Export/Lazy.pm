@@ -18,23 +18,33 @@ sub import {
           : undef
         : undef
     );
-    my $existing_import;
-    my $caller_import_name = $caller . '::import';
 
     # Sanity check whether we do or don't have an existing 'import'
-    # sub with the wrap_existing_import option. Note that we
-    # intentionally do *not* use the more simple:
+    # sub with the wrap_existing_import option.
     #
-    #    my $has_import_already = $caller->can("import") ? 1 : 0;
+    # Note that if someone has foolishly imported the UNIVERSAL
+    # package there'll be an import subroutine in every package which
+    # actually won't do anything.
     #
-    # The reason for this is that if someone imports the UNIVERSAL
-    # package every package will have an import routine according to
-    # ->can().
-    my $has_import_already = do { no strict 'refs'; no warnings 'once'; *{$caller_import_name}{CODE} } ? 1 : 0;
+    # I consider it a feature that this'll die anyway, previous
+    # versions of this code would only check if the "import" name
+    # existed in the symbol table of the caller, but by doing that
+    # we're arbitrarily restricting object inheritance just for our
+    # own internal check.
+    #
+    # Arguably I should just drop this wrap_existing_import sanity
+    # check too and just do it automatically if we ->can("import"),
+    # but it's probably a useful sanity check, particularly in the
+    # face of something like UNIVERSAL::import.
+    #
+    # If someone really *does* want to "use UNIVERSAL" and this
+    # package they can just supply "wrap_existing_import => 1" in
+    # their program.
+    my $existing_import = $caller->can("import");
     {
+        my $has_import_already = $existing_import ? 1 : 0;
         if ($wrap_existing_import) {
             die "PANIC: We need an existing 'import' with the wrap_existing_import option" unless $has_import_already;
-            $existing_import = \&{$caller_import_name};
         } else {
             die "PANIC: We're trying to clobber an existing 'import' subroutine without having the 'wrap_existing_import' option" if $has_import_already;
         }
@@ -59,7 +69,7 @@ sub import {
 
     no strict 'refs';
     no warnings 'redefine'; # In case of $wrap_existing_import
-    *{$caller_import_name} = sub {
+    *{$caller . '::import'} = sub {
         use strict;
         use warnings;
 
@@ -844,17 +854,31 @@ defined.
 
 A boolean that can only be supplied as a global option. If you provide
 this the package you're importing us into has to already have a
-defined C<import> subroutine.
+defined an C<import> subroutine which we'll locate via C<<
+->can("import") >>.
 
-We'll clobber it with something that uses us to export all the
-constants we know about (i.e. the ones passed to L</constants>), but
-anything we don't know about will be passed to the C<import>
-subroutine we clobbered.
+When provided we'll first run our own C<import> subroutine to export
+all the constants we know about (i.e. the ones passed to
+L</constants>), but anything we don't know about will be passed to the
+existing C<import> subroutine found.
 
-This is handy for converting existing packages that use e.g. a
-combination of L<Exporter> to export a bunch of L<constant> constants
-without having to port them all over to C<Constant::Export::Lazy> at
-the same time. This allows you to do so incrementally.
+Note that if existing C<import> subroutine was in the package we're
+being imported into we'll of course need to clobber it with our own
+routine (which'll call the previous routine we found by
+reference). This is perfectly fine and the common way to use this
+facility.
+
+But we also work perfectly well with inheritance, so
+C<wrap_existing_import> can be used to wrap an C<import> subroutine
+that exists in a parent class of the importing package, in which case
+we won't be clobbering anything, just inserting a new C<import>
+subroutine.
+
+This facility is handy for converting existing packages that use
+e.g. a combination of L<Exporter> to export a bunch of L<constant>
+constants without having to port them all over to
+C<Constant::Export::Lazy> at the same time. This allows you to do so
+incrementally.
 
 For convenience we also support calling these foreign subroutines with
 C<< $ctx->call($name) >>. This is handy because when migrating an
@@ -871,26 +895,14 @@ instead of C<use constant FOO => [1, 2, 3]>.
 If this isn't set and the class we're being imported into already has
 an C<import> subroutine we'll die.
 
-There's a caveat with this related to how we check for an existing
-C<import> subroutine. We don't use C<UNIVERSAL::can>, instead we
-manually check the symbol table for the package we're being imported
-into.
+If you think you shouldn't be getting that error because you didn't
+have any import subroutine it's likely that you've used L</UNIVERSAL>
+somewhere in your program.
 
-So this won't do the "right" thing if we're being imported into a
-package that doesn't have its own C<import> subroutine, but gets it
-via a base class, we'll just silently shadow that C<import> routine.
-
-The reason for this caveat is that if someone's ruined your day and
-imported the L<UNIVERSAL> package C<UNIVERSAL::can("import")> will
-return true for every single package, our check for an existing
-C<import> will always return true, so those packages that are using us
-without setting C<wrap_existing_import> will all fail.
-
-Maybe we could deal with this in some better way, e.g. do the "right"
-thing and e.g. not die if we detect an C<import> routine and
-L<UNIVERSAL> is loaded, but this edge case is really obscure, and I
-doubt anyone actually needs to use this package to export constants
-from a package that has a base class with an existing import routine.
+To us that'll look just like any other C<import> subroutine, so you'll
+either need to stop using the horror that is C<UNIVERSAL::import>, if
+you don't want to do that for some reason I can't imagine you can
+toggle C<wrap_existing_import> so it'll work with it.
 
 =head3 override
 

@@ -2,6 +2,22 @@ Revision history for Constant::Export::Lazy
 
 {{$NEXT}}
 
+    - Changed the semantics of how we check for "import" subroutine
+      that I initially tried to address in 0.16.
+
+      I was being overly clever in detecting whether an "import"
+      subroutine existed without tripping up if someone had created
+      UNIVERSAL::import, at the cost of not supporting importing
+      packages that had an "import" subroutine in their base class,
+      and having to explain why this package worked oddly with
+      inheritance.
+
+      Now we just check for the existing import routine with
+      ->can("import"). If you've used "UNIVERSAL::import" in your
+      program you're just going to have to deal with that as now
+      described in the "wrap_existing_import" section of the
+      documentation.
+
     - Before this release we'd autovifify the "options" hash even if
       no options were provided, due to our internal checking of
       {options}->{$something}. Now "options will never be autovivified

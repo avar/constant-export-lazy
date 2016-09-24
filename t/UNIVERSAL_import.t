@@ -1,7 +1,7 @@
 package TestImportingWithUniversal;
 use strict;
 use warnings;
-use Test::More tests => 2;
+use Test::More tests => 3;
 use UNIVERSAL; # Creates UNIVERSAL::import()
 BEGIN {
     my @warnings;
@@ -17,11 +17,12 @@ BEGIN {
                 UNUSED => sub { 1 },
             },
         );
-        pass "We managed to import() under UNIVERSAL!";
+        fail "We managed to import() under UNIVERSAL!";
         1;
     } or do {
         my $error = $@ || "Zombie Error";
-        fail "We failed to import: <$error>";
+        pass "We failed to import: <$error>";
+        like($error, qr/We're trying to clobber an existing 'import' subroutine/, "We get a clobbering error without wrap_existing_import");
     };
     cmp_ok(scalar @warnings, '==', 0, "We should get no warnings when importing with UNIVERSAL in effect");
 }
