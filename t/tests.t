@@ -376,7 +376,7 @@ use Constant::Export::Lazy (
             "no " . $ctx->call('TEST_CONSTANT_OPTIONS');
         },
         TEST_CONSTANT_OPTIONS => sub { "options" },
-        TEST_CONSTANT_NO_OPTIONS_CTX => sub { $_[0]->{constants} },
+        TEST_CONSTANT_NO_OPTIONS_CTX => sub { $_[0]->{__constants} },
     },
 );
 

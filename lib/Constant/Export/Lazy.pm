@@ -57,6 +57,34 @@ sub import {
     my $normalized_args = _normalize_arguments(%args);
     my $constants = $normalized_args->{constants};
 
+    my $constants_cb = sub {
+        my ($gimme, $action) = @_;
+
+        if ($action eq 'exists') {
+            return exists $constants->{$gimme};
+        } elsif ($action eq 'options.private_name_munger') {
+            return exists $constants->{$gimme}->{options}
+              ? $constants->{$gimme}->{options}->{private_name_munger}
+              : undef;
+        } elsif ($action eq 'options.override') {
+            return exists $constants->{$gimme}->{options}
+              ? $constants->{$gimme}->{options}->{override}
+              : undef;
+        } elsif ($action eq 'options.stash') {
+            return exists $constants->{$gimme}->{options}
+              ? $constants->{$gimme}->{options}->{stash}
+              : undef;
+        } elsif ($action eq 'options.after') {
+            return exists $constants->{$gimme}->{options}
+              ? $constants->{$gimme}->{options}->{after}
+              : undef;
+        } elsif ($action eq 'call') {
+            return $constants->{$gimme}->{call};
+        } else {
+            die "UNKNOWN: $action";
+        }
+    };
+
     # This is a callback that can be used to munge the import list, to
     # e.g. provide a facility to provide import tags.
     my $buildargs = (
@@ -77,7 +105,8 @@ sub import {
         my $pkg_importer = caller;
 
         my $ctx = bless {
-            constants    => $constants,
+            constants_cb => $constants_cb,
+            __constants  => $constants,
             pkg_importer => $pkg_importer,
 
             # Note that when unpacking @_ above we threw away the
@@ -122,7 +151,7 @@ sub import {
         # we've been requested to export.
         my @leftover_gimme;
         for my $gimme (@gimme) {
-            if (exists $constants->{$gimme}) {
+            if ($constants_cb->($gimme, 'exists')) {
                 # We only want to alias constants into the importer's
                 # package if the constant is on the import list, not
                 # if it's just needed within some $ctx->call() when
@@ -213,12 +242,12 @@ sub Constant::Export::Lazy::Ctx::call {
     # Unpack our options
     my $pkg_importer         = $ctx->{pkg_importer};
     my $pkg_stash            = $ctx->{pkg_stash};
-    my $constants            = $ctx->{constants};
+    my $constants_cb         = $ctx->{constants_cb};
     my $wrap_existing_import = $ctx->{wrap_existing_import};
 
     # Unless we're wrapping an existing import ->call($gimme) should
     # always be called with a $gimme that we know about.
-    unless (exists $constants->{$gimme}) {
+    unless ($constants_cb->($gimme, 'exists')) {
         die "PANIC: You're trying to get the value of an unknown constant ($gimme), and wrap_existing_import isn't set" unless $wrap_existing_import;
     }
 
@@ -235,13 +264,9 @@ sub Constant::Export::Lazy::Ctx::call {
         # we're wrapping, or we're being called from ->call(), in
         # which case we won't be calling this sub unless
         # $constants->{$gimme} exists.
-        $private_name = (
-            exists $constants->{$gimme}->{options}
-            ? $constants->{$gimme}->{options}->{private_name_munger}
-              ? $constants->{$gimme}->{options}->{private_name_munger}->($gimme)
-              : $gimme
-            : $gimme
-        );
+        $private_name = $constants_cb->($gimme, 'options.private_name_munger')
+          ? $constants_cb->($gimme, 'options.private_name_munger')->($gimme)
+          : $gimme;
 
         # In case the ->($gimme) part of the above returns undef, we
         # fallback to $gimme.
@@ -254,7 +279,7 @@ sub Constant::Export::Lazy::Ctx::call {
     };
 
     my $value;
-    if ($wrap_existing_import and not exists $constants->{$gimme}) {
+    if ($wrap_existing_import and not $constants_cb->($gimme, 'exists')) {
         # This is in case $ctx->call() is used on a constant defined
         # by constant.pm. See the giant comment about constant.pm
         # below.
@@ -281,16 +306,8 @@ sub Constant::Export::Lazy::Ctx::call {
         # always use our own $private_name.
         $value = $pkg_stash->can($private_name)->();
     } else {
-        my $override = (
-            exists $constants->{$gimme}->{options}
-            ? $constants->{$gimme}->{options}->{override}
-            : undef
-        );
-        my $stash = (
-            exists $constants->{$gimme}->{options}
-            ? $constants->{$gimme}->{options}->{stash}
-            : undef
-        );
+        my $override = $constants_cb->($gimme, 'options.override');
+        my $stash    = $constants_cb->($gimme, 'options.stash');
 
         # Only pass the stash around if we actually have it. Note that
         # "delete local $ctx->{stash}" is a feature new in 5.12.0, so
@@ -318,7 +335,7 @@ sub Constant::Export::Lazy::Ctx::call {
             $value = $overriden_value[0];
         } else {
             $source = 'callback';
-            $value = $constants->{$gimme}->{call}->($ctx);
+            $value = $constants_cb->($gimme, 'call')->($ctx);
         }
 
         unless (exists $_GETTING_VALUE_FOR_OVERRIDE->{$pkg_importer} and
@@ -390,11 +407,7 @@ sub Constant::Export::Lazy::Ctx::call {
             # Maybe we have a callback that wants to know when we define
             # our constants, e.g. for printing something out, keeping taps
             # of what constants we have etc.
-            my $after = (
-                exists $constants->{$gimme}->{options}
-                ? $constants->{$gimme}->{options}->{after}
-                : undef
-            );
+            my $after = $constants_cb->($gimme, 'options.after');
             if ($after) {
                 # Future-proof so we can do something clever with the
                 # return value in the future if we want.
